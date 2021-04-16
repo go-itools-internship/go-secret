@@ -1,28 +1,29 @@
-// Package contains interfaces for API secrets, storage and encoder.
+// Package secret contains interfaces for API secrets, storage and encoder.
 package secret
 
-//Provider defines what we can do with the data in our application
-//Describes the behavior of commands from the terminal
+// Provider organizes a gateway for managing data by setting/getting by a key.
 type Provider interface {
-	// set by key and put value
+	// SetData set by key and put value and return error
 	SetData(key, value []byte) error
-	//get data by key
+	// GetData get data by key and return array of bytes and error
 	GetData(key []byte) ([]byte, error)
 }
 
-// The cryptographer describes the behavior for encrypting and decrypting data
+// Cryptographer describes the behavior for encrypting and decrypting data
 type Cryptographer interface {
-	//takes value and return encode value
+	// Encode takes value and return encode value and error
 	Encode(value []byte) ([]byte, error)
-	//takes encode value and return decode value
+	// Decode takes encode value and return decode value and error
 	Decode(encodedValue []byte) ([]byte, error)
 }
 
-// The DataSaver describes the behavior of storing and reading data in the storage
+// DataSaver describes the behavior of storing and reading data in the storage
 // For implementation, we can use any type of storage (for example: cloud, file, local memory)
 type DataSaver interface {
-	//save encoded value by key
+	// SaveData save encoded value by key and
+	// It return any write error encountered.
 	SaveData(key, encodedValue []byte) error
-	//get encoded data by key
+	// ReadData get encoded data by key
+	// It returns the array of bytes and any write error encountered.
 	ReadData(key []byte) ([]byte, error)
 }

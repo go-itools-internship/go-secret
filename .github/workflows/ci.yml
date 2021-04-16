@@ -31,7 +31,7 @@ jobs:
         GO111MODULE=off go get -u github.com/mattn/goveralls
     
     - name: run linters
-      run: $GITHUB_WORKSPACE/golangci-lint run
+      run: $GITHUB_WORKSPACE/golangci-lint run ./... --config .golangci.yml
       env:
         GOFLAGS: "-mod=vendor"
 

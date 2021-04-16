@@ -9,7 +9,7 @@ type Provider interface {
 	GetData(key []byte) ([]byte, error)
 }
 
-// The cryptographer describes the behavior for encrypting and decrypting data
+// Describes the behavior for encrypting and decrypting data
 type Cryptographer interface {
 	//Encode takes value and return encode value and error
 	Encode(value []byte) ([]byte, error)

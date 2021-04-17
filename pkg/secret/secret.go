@@ -22,7 +22,7 @@ type Cryptographer interface {
 type DataSaver interface {
 	// SaveData save encoded value by key and
 	// It return any write error encountered.
-	SaveData(key, encodedValue []byte) error
+	SaveData(key, encodedValue []byte) error //TODO change name
 	// ReadData get encoded data by key
 	// It returns the array of bytes and any write error encountered.
 	ReadData(key []byte) ([]byte, error)

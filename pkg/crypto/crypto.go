@@ -2,8 +2,11 @@ package crypto
 
 import (
 	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
 	"encoding/hex"
 	"github.com/go-itools-internship/go-secret/pkg/secret"
+	"io"
 )
 
 type Cryptographer struct {
@@ -11,14 +14,42 @@ type Cryptographer struct {
 	Key    []byte
 }
 
-func  encodeHex(b []byte) []byte {
+func encodeHex(b []byte) []byte {
 	return []byte(hex.EncodeToString(b))
 }
 
-func  decodeHex(b []byte) []byte {
+func decodeHex(b []byte) []byte {
 	data, err := hex.DecodeString(string(b))
 	CheckError(err)
 	return data
+}
+
+func encodeGCM(block cipher.Block, value []byte) []byte {
+	//Create a new GCM
+	aesGCM, err := cipher.NewGCM(block)
+	CheckError(err)
+	//Create a nonce. Nonce should be from GCM
+	nonce := make([]byte, aesGCM.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		panic(err.Error())
+	}
+	//Encrypt the data using aesGCM.Seal
+	//Since we don't want to save the nonce somewhere else in this case, we add it as a prefix to the encrypted data. The first nonce argument in Seal is the prefix.
+	ciphertext := aesGCM.Seal(nonce, nonce, value, nil)
+	return ciphertext
+}
+
+func decodeGCM(block cipher.Block, value []byte) []byte {
+	aesGCM, err := cipher.NewGCM(block)
+	CheckError(err)
+	//Get the nonce size
+	nonceSize := aesGCM.NonceSize()
+	//Extract the nonce from the encrypted data
+	nonce, ciphertext := value[:nonceSize], value[nonceSize:]
+	//Decrypt the data
+	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, nil)
+	CheckError(err)
+	return plaintext
 }
 
 func (c *Cryptographer) Encode(value []byte) ([]byte, error) {
@@ -26,20 +57,20 @@ func (c *Cryptographer) Encode(value []byte) ([]byte, error) {
 	block, err := aes.NewCipher(c.Key)
 	CheckError(err)
 	// allocate space for ciphered data
-	out := make([]byte, len(value))
+	plaintext := make([]byte, len(value))
 	// encrypt
-	block.Encrypt(out, value)
-	return encodeHex(out), nil
+	block.Encrypt(plaintext, value)
+	return encodeHex(plaintext), nil
 }
 
 func (c *Cryptographer) Decode(encodedValue []byte) ([]byte, error) {
 	block, err := aes.NewCipher(c.Key) // key?
 	CheckError(err)
 
-	out := make([]byte, len(encodedValue))
-	block.Decrypt(out, decodeHex(encodedValue))
+	plaintext := make([]byte, len(encodedValue))
+	block.Decrypt(plaintext, decodeHex(encodedValue))
 
-	return out, nil
+	return plaintext, nil
 }
 
 func CheckError(err error) {

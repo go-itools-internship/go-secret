@@ -5,13 +5,17 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
-	"github.com/go-itools-internship/go-secret/pkg/secret"
 	"io"
 )
 
 type Cryptographer struct {
-	crypto *secret.Cryptographer
 	Key    []byte
+}
+
+func NewCryptographer(key []byte) *Cryptographer{
+	return &Cryptographer{
+		Key: key,
+	}
 }
 
 func encodeHex(b []byte) []byte {

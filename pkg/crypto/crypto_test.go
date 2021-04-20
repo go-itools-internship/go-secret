@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 )
 
@@ -28,33 +27,39 @@ var tests = []struct {
 
 func TestCryptographer_Encode(t *testing.T) {
 	for i, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Logf("\tTest: %d\tfor key %q and value %q", i+1, tt.key, tt.value)
-			{
+		t.Logf("\tTest: %d\tfor key %q and value %q", i+1, tt.key, tt.value)
+		{
+			t.Run(tt.name, func(t *testing.T) {
+
 				encode := NewCryptographer(tt.key) // must 16, 32, 64 bit key
 				encode.RandomFlag = false
-				got, _ := encode.Encode(tt.value)
-				fmt.Println(got)
+				got, err := encode.Encode(tt.value)
+				if err != nil {
+					return
+				}
 				if !bytes.Equal(got, tt.want) {
 					t.Errorf(string(got), tt.want)
 				}
-			}
-		})
+			})
+		}
 	}
 }
 
 func TestCryptographer_Decode(t *testing.T) {
 	for i, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Logf("\tTest: %d\tfor key %q and value %q", i+1, tt.key, tt.value)
-			{
+		t.Logf("\tTest: %d\tfor key %q and value %q", i+1, tt.key, tt.value)
+		{
+			t.Run(tt.name, func(t *testing.T) {
 				decode := NewCryptographer(tt.key) // must 16, 32, 64 bit key
 				decode.RandomFlag = false
-				got, _ := decode.Decode(tt.want)
+				got, err := decode.Decode(tt.want)
+				if err != nil {
+					return
+				}
 				if !bytes.Equal(got, tt.value) {
 					t.Errorf(string(got), tt.want)
 				}
-			}
-		})
+			})
+		}
 	}
 }

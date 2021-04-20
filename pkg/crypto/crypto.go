@@ -8,40 +8,37 @@ import (
 	"io"
 )
 
-type Cryptographer struct {
+type cryptographer struct {
 	Key        []byte
 	RandomFlag bool
 }
 
-func NewCryptographer(key []byte) *Cryptographer {
+func NewCryptographer(key []byte) *cryptographer {
 	key32 := make([]byte, 32)
 	copy(key32, key)
-	return &Cryptographer{
+	return &cryptographer{
 		Key:        key32,
 		RandomFlag: true,
 	}
 }
 
-func (c *Cryptographer) Encode(value []byte) ([]byte, error) {
+func (c *cryptographer) Encode(value []byte) ([]byte, error) {
 	//Create a new Cipher Block from the key
 	//must be 16, 32, 64 bit key
 	block, err := aes.NewCipher(c.Key)
 	if err != nil {
-		fmt.Println("Invalid key", err)
-		return nil, err
+		return nil, fmt.Errorf("i cryptograper, encode method: invalid key: %w", err)
 	}
 
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
-		fmt.Println("Invalid size", err)
-		return nil, err
+		return nil, fmt.Errorf("i cryptograper, encode method: invalid size: %w", err)
 	}
 	//Create a nonce. Nonce should be from GCM
 	nonce := make([]byte, aesGCM.NonceSize())
 	if c.RandomFlag {
 		if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-			fmt.Println("Unexpected data", err)
-			return nil, err
+			return nil, fmt.Errorf("i cryptograper, encode method: unexpected data: %w", err)
 		}
 	}
 	//Encrypt the data using aesGCM.Seal
@@ -51,16 +48,14 @@ func (c *Cryptographer) Encode(value []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
-func (c *Cryptographer) Decode(encodedValue []byte) ([]byte, error) {
+func (c *cryptographer) Decode(encodedValue []byte) ([]byte, error) {
 	block, err := aes.NewCipher(c.Key) // key
 	if err != nil {
-		fmt.Println("Invalid key", err)
-		return nil, err
+		return nil, fmt.Errorf("i cryptograper, decode method: invalid key: %w", err)
 	}
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
-		fmt.Println("Invalid size", err)
-		return nil, err
+		return nil, fmt.Errorf("i cryptograper, decode method: invalid size: %w", err)
 	}
 	//Get the nonce size
 	nonceSize := aesGCM.NonceSize()
@@ -69,8 +64,7 @@ func (c *Cryptographer) Decode(encodedValue []byte) ([]byte, error) {
 	//Decrypt the data
 	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		fmt.Println("Decryption error ", err)
-		return nil, err
+		return nil, fmt.Errorf("i cryptograper, decode method: decryption error: %w", err)
 	}
 	return plaintext, nil
 }

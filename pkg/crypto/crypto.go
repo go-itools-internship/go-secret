@@ -4,81 +4,73 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/hex"
+	"fmt"
 	"io"
 )
 
 type Cryptographer struct {
-	Key    []byte
+	Key        []byte
+	RandomFlag bool
 }
 
-func NewCryptographer(key []byte) *Cryptographer{
+func NewCryptographer(key []byte) *Cryptographer {
+	key32 := make([]byte, 32)
+	copy(key32, key)
 	return &Cryptographer{
-		Key: key,
+		Key:        key32,
+		RandomFlag: true,
 	}
-}
-
-func encodeHex(b []byte) []byte {
-	return []byte(hex.EncodeToString(b))
-}
-
-func decodeHex(b []byte) []byte {
-	data, err := hex.DecodeString(string(b))
-	CheckError(err)
-	return data
-}
-
-func encodeGCM(block cipher.Block, value []byte) []byte {
-	//Create a new GCM
-	aesGCM, err := cipher.NewGCM(block)
-	CheckError(err)
-	//Create a nonce. Nonce should be from GCM
-	nonce := make([]byte, aesGCM.NonceSize())
-	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-		panic(err.Error())
-	}
-	//Encrypt the data using aesGCM.Seal
-	//Since we don't want to save the nonce somewhere else in this case, we add it as a prefix to the encrypted data. The first nonce argument in Seal is the prefix.
-	ciphertext := aesGCM.Seal(nonce, nonce, value, nil)
-	return ciphertext
-}
-
-func decodeGCM(block cipher.Block, value []byte) []byte {
-	aesGCM, err := cipher.NewGCM(block)
-	CheckError(err)
-	//Get the nonce size
-	nonceSize := aesGCM.NonceSize()
-	//Extract the nonce from the encrypted data
-	nonce, ciphertext := value[:nonceSize], value[nonceSize:]
-	//Decrypt the data
-	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, nil)
-	CheckError(err)
-	return plaintext
 }
 
 func (c *Cryptographer) Encode(value []byte) ([]byte, error) {
 	//Create a new Cipher Block from the key
+	//must be 16, 32, 64 bit key
 	block, err := aes.NewCipher(c.Key)
-	CheckError(err)
-	// allocate space for ciphered data
-	plaintext := make([]byte, len(value))
-	// encrypt
-	block.Encrypt(plaintext, value)
-	return encodeHex(plaintext), nil
+	if err != nil {
+		fmt.Println("Invalid key", err)
+		return nil, err
+	}
+
+	aesGCM, err := cipher.NewGCM(block)
+	if err != nil {
+		fmt.Println("Invalid size", err)
+		return nil, err
+	}
+	//Create a nonce. Nonce should be from GCM
+	nonce := make([]byte, aesGCM.NonceSize())
+	if c.RandomFlag {
+		if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+			fmt.Println("Unexpected data", err)
+			return nil, err
+		}
+	}
+	//Encrypt the data using aesGCM.Seal
+	//Since we don't want to save the nonce somewhere else in this case,
+	//we add it as a prefix to the encrypted data. The first nonce argument in Seal is the prefix.
+	ciphertext := aesGCM.Seal(nonce, nonce, value, nil)
+	return ciphertext, nil
 }
 
 func (c *Cryptographer) Decode(encodedValue []byte) ([]byte, error) {
-	block, err := aes.NewCipher(c.Key) // key?
-	CheckError(err)
-
-	plaintext := make([]byte, len(encodedValue))
-	block.Decrypt(plaintext, decodeHex(encodedValue))
-
-	return plaintext, nil
-}
-
-func CheckError(err error) {
+	block, err := aes.NewCipher(c.Key) // key
 	if err != nil {
-		panic(err.Error())
+		fmt.Println("Invalid key", err)
+		return nil, err
 	}
+	aesGCM, err := cipher.NewGCM(block)
+	if err != nil {
+		fmt.Println("Invalid size", err)
+		return nil, err
+	}
+	//Get the nonce size
+	nonceSize := aesGCM.NonceSize()
+	//Extract the nonce from the encrypted data
+	nonce, ciphertext := encodedValue[:nonceSize], encodedValue[nonceSize:]
+	//Decrypt the data
+	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		fmt.Println("Decryption error ", err)
+		return nil, err
+	}
+	return plaintext, nil
 }

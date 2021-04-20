@@ -29,7 +29,7 @@ func TestCryptographer_Encode(t *testing.T) {
 	for i, tt := range tests {
 		t.Logf("\tTest: %d\tfor key %q and value %q", i+1, tt.key, tt.value)
 		t.Run(tt.name, func(t *testing.T) {
-
+			tt := tt
 			encode := NewCryptographer(tt.key) // must 16, 32, 64 bit key
 			encode.RandomFlag = false
 			got, err := encode.Encode(tt.value)
@@ -47,6 +47,7 @@ func TestCryptographer_Decode(t *testing.T) {
 	for i, tt := range tests {
 		t.Logf("\tTest: %d\tfor key %q and value %q", i+1, tt.key, tt.value)
 		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
 			decode := NewCryptographer(tt.key) // must 16, 32, 64 bit key
 			decode.RandomFlag = false
 			got, err := decode.Decode(tt.want)

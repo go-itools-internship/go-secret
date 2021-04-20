@@ -4,6 +4,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha256"
 	"fmt"
 	"io"
 )
@@ -14,8 +15,9 @@ type cryptographer struct {
 }
 
 func NewCryptographer(key []byte) *cryptographer {
+	h := sha256.New()
 	key32 := make([]byte, 32)
-	copy(key32, key)
+	copy(key32, h.Sum(key))
 	return &cryptographer{
 		Key:        key32,
 		RandomFlag: true,

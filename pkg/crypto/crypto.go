@@ -1,3 +1,8 @@
+/*
+	Package crypto provides functions to encode and decode data
+	Using aes crypto
+	Random flag defines random nonce sequence or same
+*/
 package crypto
 
 import (

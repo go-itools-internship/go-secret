@@ -30,21 +30,20 @@ func NewCryptographer(key []byte) *cryptographer {
 
 func (c *cryptographer) Encode(value []byte) ([]byte, error) {
 	// Create a new Cipher Block from the key
-	// must be 16, 32, 64 bit key
 	block, err := aes.NewCipher(c.key)
 	if err != nil {
-		return nil, fmt.Errorf("cryptograper, encode method: invalid key: %w", err)
+		return nil, fmt.Errorf("cryptographer, encode method: invalid key: %w", err)
 	}
 
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
-		return nil, fmt.Errorf("cryptograper, encode method: invalid size: %w", err)
+		return nil, fmt.Errorf("cryptographer, encode method: invalid size: %w", err)
 	}
 	// Create a nonce. Nonce should be from GCM
 	nonce := make([]byte, aesGCM.NonceSize())
 	if c.randomFlag {
 		if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-			return nil, fmt.Errorf("cryptograper, encode method: unexpected data: %w", err)
+			return nil, fmt.Errorf("cryptographer, encode method: unexpected data: %w", err)
 		}
 	}
 	// Encrypt the data using aesGCM.Seal
@@ -57,11 +56,11 @@ func (c *cryptographer) Encode(value []byte) ([]byte, error) {
 func (c *cryptographer) Decode(encodedValue []byte) ([]byte, error) {
 	block, err := aes.NewCipher(c.key)
 	if err != nil {
-		return nil, fmt.Errorf("cryptograper, decode method: invalid key: %w", err)
+		return nil, fmt.Errorf("cryptographer, decode method: invalid key: %w", err)
 	}
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
-		return nil, fmt.Errorf("cryptograper, decode method: invalid size: %w", err)
+		return nil, fmt.Errorf("cryptographer, decode method: invalid size: %w", err)
 	}
 	// Get the nonce size
 	nonceSize := aesGCM.NonceSize()
@@ -70,7 +69,7 @@ func (c *cryptographer) Decode(encodedValue []byte) ([]byte, error) {
 	// Decrypt the data
 	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		return nil, fmt.Errorf("cryptograper, decode method: decryption error: %w", err)
+		return nil, fmt.Errorf("cryptographer, decode method: decryption error: %w", err)
 	}
 	return plaintext, nil
 }

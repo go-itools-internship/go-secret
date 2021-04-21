@@ -30,8 +30,8 @@ func TestCryptographer_Encode(t *testing.T) {
 		t.Logf("\tTest: %d\tfor key %q and value %q", i+1, tt.key, tt.value)
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			encode := NewCryptographer(tt.key) // must 16, 32, 64 bit key
-			encode.RandomFlag = false
+			encode := NewCryptographer(tt.key)
+			encode.randomFlag = false
 			got, err := encode.Encode(tt.value)
 			if err != nil {
 				return
@@ -48,8 +48,8 @@ func TestCryptographer_Decode(t *testing.T) {
 		t.Logf("\tTest: %d\tfor key %q and value %q", i+1, tt.key, tt.value)
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			decode := NewCryptographer(tt.key) // must 16, 32, 64 bit key
-			decode.RandomFlag = false
+			decode := NewCryptographer(tt.key)
+			decode.randomFlag = false
 			got, err := decode.Decode(tt.want)
 			if err != nil {
 				return

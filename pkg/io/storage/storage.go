@@ -25,11 +25,6 @@ func NewFileVault(path string) (*fileVault, error) {
 	}
 	defer file.Close()
 
-	//decode data from json format from file and put it in storage
-	err = json.NewDecoder(file).Decode(&storage)
-	if err != nil {
-		return nil, fmt.Errorf("it is impossible to get the data from the file: %w", err)
-	}
 	return &fileVault{storage: storage, path: path}, nil
 }
 

@@ -1,56 +1,72 @@
-package pkg
+/*
+Package  storage provides functions for storing and retrieving data.
+from json file
+*/
+package storage
 
 import (
+	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 )
 
-type FileVault struct {
-	Storage map[string][]byte
-	Path    string
+type fileVault struct {
+	storage map[string][]byte
+	path    string
 }
 
-func NewFileVault(storage map[string][]byte, path string) *FileVault {
-	return &FileVault{Storage: storage, Path: path}
-}
+func NewFileVault(path string) (*fileVault, error) {
+	var storage = make(map[string][]byte)
 
-func (f *FileVault) SaveData(key, encodedValue []byte) error {
-	file, err := os.Create(f.Path + string(key))
+	//open the file at the specified path, create it if the file is not found
+	file, err := os.OpenFile(path, os.O_CREATE, 0600)
 	if err != nil {
-		fmt.Println("Unable to Create file:", err)
-		os.Exit(1)
-	}
-	f.Storage[string(key)] = encodedValue
-
-	defer file.Close()
-	_, err = file.Write(encodedValue)
-	if err != nil {
-		fmt.Println("Unable to write encodedValue:", err)
-		os.Exit(1)
-	}
-
-	fmt.Println("Done.")
-	return err
-}
-
-func (f *FileVault) ReadData(key []byte) ([]byte, error) {
-	file, err := os.Open(f.Path + string(key))
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return nil, fmt.Errorf("unable to open or create file: %w", err)
 	}
 	defer file.Close()
 
-	data := make([]byte, 64)
-
-	for {
-		n, err := file.Read(data)
-		if err == io.EOF {
-			break
-		}
-		fmt.Print(string(data[:n]))
+	//decode data from json format from file and put it in storage
+	err = json.NewDecoder(file).Decode(&storage)
+	if err != nil {
+		return nil, fmt.Errorf("it is impossible to get the data from the file: %w", err)
 	}
-	fmt.Println()
-	return data, err
+	return &fileVault{storage: storage, path: path}, nil
+}
+
+func (f *fileVault) SaveData(key, encodedValue []byte) error {
+
+	//open the file for writing only
+	file, err := os.OpenFile(f.path, os.O_WRONLY, 0777)
+	if err != nil {
+		return fmt.Errorf("unable to open file: %w", err)
+	}
+	defer file.Close()
+
+	//set coming encodedValue to our storage
+	f.storage[string(key)] = encodedValue
+
+	//encode the data in storage and put it to file in json format
+	err = json.NewEncoder(file).Encode(f.storage)
+	if err != nil {
+		return fmt.Errorf("unable to write data from map to file: %w", err)
+	}
+	return nil
+}
+
+func (f *fileVault) ReadData(key []byte) ([]byte, error) {
+	file, err := os.OpenFile(f.path, os.O_RDONLY, 0777)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open file: %w", err)
+	}
+	defer file.Close()
+
+	//decode data from json format from file and put it in storage
+	err = json.NewDecoder(file).Decode(&f.storage)
+	if err != nil {
+		return nil, fmt.Errorf("unable to write data from file to map: %w", err)
+	}
+
+	data := f.storage[string(key)]
+
+	return data, nil
 }

@@ -88,6 +88,9 @@ func (a *actions) SetByKey(w http.ResponseWriter, r *http.Request) {
 	}
 	if _, ok := a.ss[requestBody.ActionType]; !ok {
 		w.WriteHeader(http.StatusBadRequest)
+		if _, err := w.Write([]byte(`{"error": "cannot find provided action type"}`)); err != nil {
+			log.Println("cannot write response body: ", err.Error())
+		}
 		return
 	}
 

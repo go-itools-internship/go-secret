@@ -8,6 +8,12 @@ import (
 func TestFileVault_SaveData(t *testing.T) {
 
 	fileVault, err := NewFileVault("file")
+	defer func() {
+		err := fileVault.Close()
+		if err != nil {
+			t.Error("file not closed")
+		}
+	}()
 	if err != nil {
 		fmt.Println(err)
 		t.Error("fileVault = nil")
@@ -19,13 +25,6 @@ func TestFileVault_SaveData(t *testing.T) {
 		t.Error("file not found or something wrong")
 	}
 
-	defer func() {
-		err := fileVault.Close()
-		if err != nil {
-			t.Error("file not closed")
-		}
-	}()
-
 	wont := fileVault.storage["f1"]
 	if string(wont) != string(got) || err != nil {
 		t.Error("file not found or something wrong")
@@ -35,6 +34,14 @@ func TestFileVault_SaveData(t *testing.T) {
 func TestFileVault_ReadData(t *testing.T) {
 
 	fileVault, err := NewFileVault("file")
+
+	defer func() {
+		err := fileVault.Close()
+		if err != nil {
+			t.Error("file not closed")
+		}
+	}()
+
 	if err != nil {
 		fmt.Println(err)
 		t.Error("fileVault = nil")
@@ -47,10 +54,4 @@ func TestFileVault_ReadData(t *testing.T) {
 		t.Error("file not found or something wrong")
 	}
 
-	defer func() {
-		err := fileVault.Close()
-		if err != nil {
-			t.Error("file not closed")
-		}
-	}()
 }

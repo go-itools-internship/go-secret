@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 type fileVault struct {
@@ -19,7 +20,7 @@ type fileVault struct {
 func NewFileVault(path string) (*fileVault, error) {
 	var storage = make(map[string][]byte)
 
-	file, err := os.Open(path)
+	file, err := os.Open(filepath.Clean(path))
 	if os.IsNotExist(err) {
 		file, err = os.Create(path)
 		if err != nil {
@@ -73,11 +74,11 @@ func (f *fileVault) ReadData(key []byte) ([]byte, error) {
 
 func (f *fileVault) Close() (err error) {
 
-	//encode the data in storage and put it to file in json format
-	//err = json.NewEncoder(f.file).Encode(f.storage)
-	//if err != nil {
+	// encode the data in storage and put it to file in json format
+	// err = json.NewEncoder(f.file).Encode(f.storage)
+	// if err != nil {
 	//	return fmt.Errorf("unable to write data from map to file: %w", err)
-	//}
+	// }
 
 	defer func() {
 		cerr := f.file.Close()

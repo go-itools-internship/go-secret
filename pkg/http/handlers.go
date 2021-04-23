@@ -1,3 +1,6 @@
+/*
+Package http provides handlers for different actions for REST API.
+*/
 package http
 
 import (

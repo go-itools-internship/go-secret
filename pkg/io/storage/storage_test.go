@@ -7,36 +7,50 @@ import (
 
 func TestFileVault_SaveData(t *testing.T) {
 
-	fv, err := NewFileVault("file")
+	fileVault, err := NewFileVault("file")
 	if err != nil {
 		fmt.Println(err)
-		t.Error("newFileVault = nil")
+		t.Error("fileVault = nil")
 	}
-	got := []byte("Hello")
+	got := []byte("Hey")
 
-	err = fv.SaveData([]byte("f1"), got)
+	err = fileVault.SaveData([]byte("f1"), got)
 	if err != nil {
 		t.Error("file not found or something wrong")
 	}
 
-	wont := fv.storage["f1"]
-	if string(wont) != string(got) {
+	defer func() {
+		err := fileVault.Close()
+		if err != nil {
+			t.Error("file not closed")
+		}
+	}()
+
+	wont := fileVault.storage["f1"]
+	if string(wont) != string(got) || err != nil {
 		t.Error("file not found or something wrong")
 	}
 }
 
 func TestFileVault_ReadData(t *testing.T) {
 
-	fv, err := NewFileVault("file")
+	fileVault, err := NewFileVault("file")
 	if err != nil {
 		fmt.Println(err)
-		t.Error("newFileVault = nil")
+		t.Error("fileVault = nil")
 	}
 	wont := []byte("World")
-	fv.storage["f2"] = wont
+	fileVault.storage["f2"] = wont
 
-	got, err := fv.ReadData([]byte("f2"))
+	got, err := fileVault.ReadData([]byte("f2"))
 	if err != nil || string(got) != string(wont) {
 		t.Error("file not found or something wrong")
 	}
+
+	defer func() {
+		err := fileVault.Close()
+		if err != nil {
+			t.Error("file not closed")
+		}
+	}()
 }

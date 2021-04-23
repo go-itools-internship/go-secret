@@ -2,9 +2,10 @@ package http
 
 import (
 	"encoding/json"
-	"github.com/go-itools-internship/go-secret/pkg/secret"
 	"log"
 	"net/http"
+
+	"github.com/go-itools-internship/go-secret/pkg/secret"
 )
 
 const (

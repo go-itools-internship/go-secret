@@ -3,12 +3,13 @@ package http
 import (
 	"bytes"
 	"fmt"
-	"github.com/go-itools-internship/go-secret/pkg/secret"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/go-itools-internship/go-secret/pkg/secret"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHTTPAction(t *testing.T) {

@@ -1,8 +1,8 @@
 package storage
 
 import (
+	"bytes"
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 )
@@ -38,7 +38,9 @@ func TestFileVault(t *testing.T) {
 		}
 		got := fileVault.Storage["f1"]
 
-		assert.EqualValues(t, want, got)
+		if !bytes.Equal(got, want) {
+			t.Errorf("valies is different")
+		}
 	})
 
 	t.Run("ReadData", func(t *testing.T) {
@@ -67,7 +69,9 @@ func TestFileVault(t *testing.T) {
 			t.Error("file not found or something wrong")
 		}
 
-		assert.EqualValues(t, want, got)
+		if !bytes.Equal(got, want) {
+			t.Errorf("valies is different")
+		}
 	})
 
 	err = os.Remove("file")

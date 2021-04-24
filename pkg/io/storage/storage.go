@@ -20,13 +20,12 @@ func NewFileVault(path string) (*fileVault, error) {
 	storage := make(map[string][]byte)
 
 	file, err := os.Open(filepath.Clean(path))
-	if os.IsNotExist(err) {
-		file, err = os.Create(path)
-		if err != nil {
-			return nil, fmt.Errorf("unable to create file: %w", err)
+	if err != nil {
+		if os.IsNotExist(err) {
+			file, err = os.Create(path)
+		} else {
+			return nil, fmt.Errorf("unable to create or open file: %w", err)
 		}
-	} else if err != nil {
-		return nil, fmt.Errorf("unable to open file: %w", err)
 	} else {
 		err = json.NewDecoder(file).Decode(&storage)
 		if err != nil {

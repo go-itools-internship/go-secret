@@ -3,6 +3,7 @@ package provider
 
 import (
 	"fmt"
+
 	"github.com/go-itools-internship/go-secret/pkg/secret"
 )
 

@@ -1,57 +1,77 @@
 package storage
 
 import (
-	"fmt"
+	"encoding/json"
+	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 )
 
-func TestFileVault_SaveData(t *testing.T) {
+func TestFileVault(t *testing.T) {
 
 	fileVault, err := NewFileVault("file")
-	defer func() {
-		err := fileVault.Close()
-		if err != nil {
-			t.Error("file not closed")
-		}
-	}()
 	if err != nil {
-		fmt.Println(err)
 		t.Error("fileVault = nil")
 	}
-	got := []byte("Hey")
 
-	err = fileVault.SaveData([]byte("f1"), got)
-	if err != nil {
-		t.Error("file not found or something wrong")
-	}
+	t.Run("SaveData", func(t *testing.T) {
+		want := []byte("Hey")
 
-	wont := fileVault.storage["f1"]
-	if string(wont) != string(got) || err != nil {
-		t.Error("file not found or something wrong")
-	}
-}
-
-func TestFileVault_ReadData(t *testing.T) {
-
-	fileVault, err := NewFileVault("file")
-
-	defer func() {
-		err := fileVault.Close()
+		err = fileVault.SaveData([]byte("f1"), want)
 		if err != nil {
-			t.Error("file not closed")
+			t.Error("file not found or something wrong")
 		}
-	}()
 
+		file, err := os.OpenFile(fileVault.path, os.O_RDONLY, 0600)
+		if err != nil {
+			t.Error("unable to open file")
+		}
+		defer func() {
+			cerr := file.Close()
+			if err == nil {
+				err = cerr
+			}
+		}()
+		err = json.NewDecoder(file).Decode(&fileVault.Storage)
+		if err != nil {
+			t.Error("unable to write data from file to map")
+		}
+		got := fileVault.Storage["f1"]
+
+		assert.EqualValues(t, want, got)
+	})
+
+	t.Run("ReadData", func(t *testing.T) {
+		want := []byte("World")
+
+		file, err := os.OpenFile(fileVault.path, os.O_WRONLY, 0600)
+		if err != nil {
+			t.Error("unable to open file")
+		}
+		defer func() {
+			cerr := file.Close()
+			if err == nil {
+				err = cerr
+			}
+		}()
+
+		fileVault.Storage["f2"] = want
+
+		err = json.NewEncoder(file).Encode(fileVault.Storage)
+		if err != nil {
+			t.Error("unable to write data from map to file")
+		}
+
+		got, err := fileVault.ReadData([]byte("f2"))
+		if err != nil || string(got) != string(want) {
+			t.Error("file not found or something wrong")
+		}
+
+		assert.EqualValues(t, want, got)
+	})
+
+	err = os.Remove("file")
 	if err != nil {
-		fmt.Println(err)
-		t.Error("fileVault = nil")
+		t.Error("file not removed")
 	}
-	wont := []byte("World")
-	fileVault.storage["f2"] = wont
-
-	got, err := fileVault.ReadData([]byte("f2"))
-	if err != nil || string(got) != string(wont) {
-		t.Error("file not found or something wrong")
-	}
-
 }

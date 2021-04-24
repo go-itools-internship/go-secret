@@ -77,10 +77,10 @@ func TestProvider_GetData(t *testing.T) {
 		p := NewProvider(mockCr, mockDs)
 		data, err := p.GetData(key)
 		require.NoError(t, err)
+		assert.Equal(t, value, data)
 
 		mockDs.AssertExpectations(t)
 		mockCr.AssertExpectations(t)
-		assert.Equal(t, value, data)
 	})
 
 	t.Run("read data error", func(t *testing.T) {

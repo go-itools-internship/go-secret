@@ -5,7 +5,9 @@ package storage
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -18,72 +20,70 @@ type fileVault struct {
 func NewFileVault(path string) (*fileVault, error) {
 	storage := make(map[string][]byte)
 
-	file, err := os.Open(filepath.Clean(path))
+	f, err := os.Open(filepath.Clean(path))
 	if err != nil {
-		if os.IsNotExist(err) {
-			file, err = os.Create(path)
-			if err != nil {
-				return nil, fmt.Errorf("unable to create file: %w", err)
-			}
-		} else {
-			return nil, fmt.Errorf("unable to open file: %w", err)
+		if !os.IsNotExist(err) {
+			return nil, fmt.Errorf("filevault: unable to open file: %w", err)
 		}
-	} else {
-		err = json.NewDecoder(file).Decode(&storage)
-		if err != nil {
-			return nil, fmt.Errorf("unable to write data from file to map: %w", err)
+		if f, err = os.Create(path); err != nil {
+			return nil, fmt.Errorf("filevault: unable to create file: %w", err)
+		}
+		if _, err := fmt.Fprintf(f, `{}`); err != nil {
+			return nil, fmt.Errorf("filevault: unable to init file: %w", err)
 		}
 	}
 	defer func() {
-		cerr := file.Close()
-		if err == nil {
-			err = cerr
+		if cerr := f.Close(); err == nil {
+			err = fmt.Errorf("filevault: %w", cerr)
 		}
 	}()
 
-	return &fileVault{storage: storage, path: path}, err
+	if err := json.NewDecoder(f).Decode(&storage); err != nil {
+		if !errors.Is(err, io.EOF) {
+			return nil, fmt.Errorf("filevault: unable to decode data: %w", err)
+		}
+	}
+
+	return &fileVault{storage: storage, path: path}, nil
 }
 
 func (f *fileVault) SaveData(key, encodedValue []byte) error {
-
 	file, err := os.OpenFile(f.path, os.O_WRONLY, 0600)
 	if err != nil {
-		return fmt.Errorf("unable to open file: %w", err)
+		return fmt.Errorf("filevault: unable to open file while saving: %w", err)
 	}
 	defer func() {
-		cerr := file.Close()
-		if err == nil {
-			err = cerr
+		if cerr := file.Close(); err == nil {
+			err = fmt.Errorf("filevault: %w", cerr)
 		}
 	}()
 
 	f.storage[string(key)] = encodedValue
-
-	err = json.NewEncoder(file).Encode(f.storage)
-	if err != nil {
-		return fmt.Errorf("unable to write data from map to file: %w", err)
+	if err = json.NewEncoder(file).Encode(f.storage); err != nil {
+		return fmt.Errorf("filevault: unable to encode data while saving: %w", err)
 	}
-	return err
+	return nil
 }
 
 func (f *fileVault) ReadData(key []byte) ([]byte, error) {
 	file, err := os.OpenFile(f.path, os.O_RDONLY, 0600)
 	if err != nil {
-		return nil, fmt.Errorf("unable to open file: %w", err)
+		return nil, fmt.Errorf("filevault: unable to open file while reading: %w", err)
 	}
 	defer func() {
-		cerr := file.Close()
-		if err == nil {
-			err = cerr
+		if cerr := file.Close(); err == nil {
+			err = fmt.Errorf("filevault: %w", cerr)
 		}
 	}()
 
-	err = json.NewDecoder(file).Decode(&f.storage)
-	if err != nil {
-		return nil, fmt.Errorf("unable to write data from file to map: %w", err)
+	if err := json.NewDecoder(file).Decode(&f.storage); err != nil {
+		return nil, fmt.Errorf("filevault: unable to decode while reading: %w", err)
 	}
 
-	data := f.storage[string(key)]
+	data, ok := f.storage[string(key)]
+	if !ok {
+		return nil, fmt.Errorf("filevault: cannot read data: not found")
+	}
 
-	return data, err
+	return data, nil
 }

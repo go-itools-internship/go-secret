@@ -1,4 +1,6 @@
-// Package storage provides functions for storing and retrieving data.
+/*
+Package storage provides functions for storing and retrieving data.
+*/
 package storage
 
 import (

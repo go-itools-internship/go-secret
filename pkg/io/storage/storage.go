@@ -1,6 +1,5 @@
 /*
 Package storage provides functions for storing and retrieving data.
-from json file
 */
 package storage
 

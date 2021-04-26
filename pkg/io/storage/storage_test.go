@@ -33,11 +33,13 @@ func TestFileVault(t *testing.T) {
 				err = cerr
 			}
 		}()
-		err = json.NewDecoder(file).Decode(&fileVault.Storage)
+
+		testStorage := make(map[string][]byte)
+		err = json.NewDecoder(file).Decode(&testStorage)
 		if err != nil {
 			t.Error("unable to write data from file to map")
 		}
-		got := fileVault.Storage["f1"]
+		got := testStorage["f1"]
 
 		assert.EqualValues(t, want, got)
 	})
@@ -56,9 +58,9 @@ func TestFileVault(t *testing.T) {
 			}
 		}()
 
-		fileVault.Storage["f2"] = want
+		fileVault.storage["f2"] = want
 
-		err = json.NewEncoder(file).Encode(fileVault.Storage)
+		err = json.NewEncoder(file).Encode(fileVault.storage)
 		if err != nil {
 			t.Error("unable to write data from map to file")
 		}

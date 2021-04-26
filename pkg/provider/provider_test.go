@@ -13,7 +13,7 @@ func TestProvider_SetData(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		key := []byte{1, 1, 1}
 		value := []byte{0, 1, 3}
-		encodedValue := []byte{0, 1, 3}
+		encodedValue := []byte{0, 1, 3, 5, 34}
 		mockCr := new(MockCryptographer)
 		mockDs := new(MockDataSaver)
 
@@ -31,7 +31,7 @@ func TestProvider_SetData(t *testing.T) {
 	t.Run("encode method error", func(t *testing.T) {
 		key := []byte{1, 1, 1}
 		value := []byte{0, 1, 3}
-		encodedValue := []byte{0, 1, 3}
+		encodedValue := []byte{0, 1, 3, 5, 34}
 		mockCr := new(MockCryptographer)
 		mockDs := new(MockDataSaver)
 
@@ -48,7 +48,7 @@ func TestProvider_SetData(t *testing.T) {
 	t.Run("setData method error", func(t *testing.T) {
 		key := []byte{1, 1, 1}
 		value := []byte{0, 1, 3}
-		encodedValue := []byte{0, 1, 3}
+		encodedValue := []byte{0, 1, 3, 5, 34}
 		mockCr := new(MockCryptographer)
 		mockDs := new(MockDataSaver)
 
@@ -68,7 +68,7 @@ func TestProvider_GetData(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		key := []byte{1, 1, 1}
 		value := []byte{0, 1, 3}
-		encodedValue := []byte{0, 1, 3}
+		encodedValue := []byte{0, 1, 3, 5, 34}
 		mockCr := new(MockCryptographer)
 		mockDs := new(MockDataSaver)
 
@@ -102,7 +102,7 @@ func TestProvider_GetData(t *testing.T) {
 	t.Run("decode error", func(t *testing.T) {
 		key := []byte{1, 1, 1}
 		value := []byte{0, 1, 3}
-		encodedValue := []byte{0, 1, 3}
+		encodedValue := []byte{0, 1, 3, 4}
 		mockCr := new(MockCryptographer)
 		mockDs := new(MockDataSaver)
 

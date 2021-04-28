@@ -1,3 +1,4 @@
+// Package cmd provides functions set and get with cobra library
 package cmd
 
 import (
@@ -18,29 +19,26 @@ type root struct {
 	rootCmd   *cobra.Command
 }
 
-func RootExecute(r root) {
-	r.rootCmd.AddCommand(r.Set())
-	r.rootCmd.AddCommand(r.Get())
-	err := r.rootCmd.ExecuteContext(context.Background())
-	if err != nil {
-		fmt.Println(err)
-	}
+func (r *root) RootExecute(ctx context.Context) error { //todo take context
+	err := r.rootCmd.ExecuteContext(ctx)
+	return err
 }
 
 func NewRoot() *root {
 	var rootCmd = &cobra.Command{
 		Use: "root",
-		Run: func(cmd *cobra.Command, args []string) {
-		},
 	}
 	v := rootCmd.PersistentFlags().StringP("value", "v", "", "value to provider")
 	k := rootCmd.PersistentFlags().StringP("key", "k", "", "key to provider")
 	ck := rootCmd.PersistentFlags().StringP("cipherKey", "c", "", "cipher key to provider")
 	p := rootCmd.PersistentFlags().StringP("path", "p", "file.txt", "path to provider")
-	return &root{cipherKey: ck, key: k, value: v, path: p, rootCmd: rootCmd}
+	rootData := &root{cipherKey: ck, key: k, value: v, path: p, rootCmd: rootCmd}
+	rootCmd.AddCommand(rootData.getCmd())
+	rootCmd.AddCommand(rootData.setCmd())
+	return rootData
 }
 
-func (r *root) Set() *cobra.Command {
+func (r *root) setCmd() *cobra.Command {
 	var setCmd = &cobra.Command{
 		Use:   "set",
 		Short: "Set data in file by key",
@@ -61,7 +59,7 @@ func (r *root) Set() *cobra.Command {
 	return setCmd
 }
 
-func (r *root) Get() *cobra.Command {
+func (r *root) getCmd() *cobra.Command {
 	var getCmd = &cobra.Command{
 		Use:   "get",
 		Short: "Get data by key",

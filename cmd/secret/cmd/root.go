@@ -26,7 +26,8 @@ func (r *root) RootExecute(ctx context.Context) error { //todo take context
 
 func NewRoot() *root {
 	var rootCmd = &cobra.Command{
-		Use: "root",
+		Use:   "root",
+		Short: "root includes cli commands",
 	}
 	v := rootCmd.PersistentFlags().StringP("value", "v", "", "value to provider")
 	k := rootCmd.PersistentFlags().StringP("key", "k", "", "key to provider")

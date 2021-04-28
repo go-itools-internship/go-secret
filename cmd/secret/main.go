@@ -1,14 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
-)
 
-var (
-	revision = "unknown"
+	"github.com/go-itools-internship/go-secret/cmd/secret/cmd"
 )
 
 func main() {
-	fmt.Printf("secret %s\n", revision)
-	fmt.Println("Hi from go-secret!")
+	p := cmd.NewRoot()
+	err := p.RootExecute(context.Background())
+	if err != nil {
+		fmt.Println(err)
+	}
 }

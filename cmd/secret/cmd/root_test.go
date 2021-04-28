@@ -32,7 +32,8 @@ func TestRoot_Set(t *testing.T) {
 
 		var got string
 		require.Len(t, fileData, 1)
-		for key, _ := range fileData {
+		for key, value := range fileData {
+			_ = value
 			got = key
 			break // we iterate one time to get first key
 		}

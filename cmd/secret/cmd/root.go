@@ -19,7 +19,7 @@ type root struct {
 	rootCmd   *cobra.Command
 }
 
-func (r *root) RootExecute(ctx context.Context) error { //todo take context
+func (r *root) RootExecute(ctx context.Context) error {
 	err := r.rootCmd.ExecuteContext(ctx)
 	return err
 }
@@ -72,6 +72,9 @@ func (r *root) getCmd() *cobra.Command {
 			}
 			pr := provider.NewProvider(cr, ds)
 			data, err := pr.GetData([]byte(*r.key))
+			if err != nil {
+				fmt.Println(err)
+			}
 			fmt.Println(string(data))
 		},
 	}

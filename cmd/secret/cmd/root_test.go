@@ -13,8 +13,8 @@ func TestRoot_Set(t *testing.T) {
 	t.Run("expect one keys", func(t *testing.T) {
 		key := "key value"
 		path := "testFile.txt"
-		version := "test"
-		r := New(version)
+
+		r := New()
 		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipherKey", "ck", "--path", path})
 		err := r.Execute(context.Background())
 		require.NoError(t, err)
@@ -44,13 +44,13 @@ func TestRoot_Set(t *testing.T) {
 		firstKey := "first key"
 		secondKey := "second key"
 		path := "testFile.txt"
-		version := "test"
-		r := New(version)
+
+		r := New()
 		r.cmd.SetArgs([]string{"set", "--key", firstKey, "--value", "test value", "--cipherKey", "ck", "--path", path})
 		err := r.Execute(context.Background())
 		require.NoError(t, err)
 
-		r2 := New(version)
+		r2 := New()
 		r2.cmd.SetArgs([]string{"set", "--key", secondKey, "--value", "test value", "--cipherKey", "ck", "--path", path})
 		err = r2.Execute(context.Background())
 		require.NoError(t, err)
@@ -79,7 +79,6 @@ func TestRoot_Get(t *testing.T) {
 	key := "key value"
 	value := "60OBdPOOkSOu6kn8ZuMuXtAPVrUEFkPREydDwY6+ip/LrAFaHSc="
 	path := "testFile.txt"
-	version := "test"
 	file, err := os.Create(path)
 	require.NoError(t, err)
 	defer func() {
@@ -94,7 +93,7 @@ func TestRoot_Get(t *testing.T) {
 	fileTestData[key] = value
 	require.NoError(t, json.NewEncoder(file).Encode(&fileTestData))
 
-	r := New(version)
+	r := New()
 	r.cmd.SetArgs([]string{"get", "--key", key, "--cipherKey", "ck", "--path", path})
 	executeErr := r.Execute(context.Background())
 	require.NoError(t, executeErr)

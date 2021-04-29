@@ -13,7 +13,7 @@ var (
 
 func main() {
 	fmt.Println("Hi from go-secret!")
-	p := cmd.New(revision)
+	p := cmd.New(cmd.RootWithVersion(revision))
 	err := p.Execute(context.Background())
 	if err != nil {
 		fmt.Println(err)

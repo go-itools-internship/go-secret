@@ -12,7 +12,7 @@ import (
 )
 
 type root struct {
-	version   *string
+	options   options
 	key       *string
 	cipherKey *string
 	value     *string
@@ -20,12 +20,20 @@ type root struct {
 	cmd       *cobra.Command
 }
 
-type RootOptions func(*root)
+type options struct {
+	version string
+}
 
-// RootWithVersion is optional function can add version to root
-func RootWithVersion(version string) RootOptions {
-	return func(r *root) {
-		r.cmd.Version = version
+var defaultVersion = options{
+	version: "undefined",
+}
+
+type RootOptions func(o *options)
+
+// Version is optional function can add version to root
+func Version(ver string) RootOptions {
+	return func(o *options) {
+		o.version = ver
 	}
 }
 
@@ -37,24 +45,26 @@ func (r *root) Execute(ctx context.Context) error {
 // New function create and set flags and commands in cobra CLI
 // Version is optional field. You can use it if you want indicate version
 func New(opts ...RootOptions) *root {
+	version := defaultVersion
+	for _, opt := range opts {
+		opt(&version)
+	}
 
 	var secret = &cobra.Command{
-		Use:   "secret",
-		Short: "Contains commands to set and get encrypt data",
-		Long:  "Create CLI to set and get secrets via the command line",
+		Use:     "secret",
+		Short:   "Contains commands to set and get encrypt data",
+		Long:    "Create CLI to set and get secrets via the command line",
+		Version: version.version,
 	}
 	v := secret.PersistentFlags().StringP("value", "v", "", "value to be encrypted")
 	k := secret.PersistentFlags().StringP("key", "k", "", "key for pair key-value")
 	ck := secret.PersistentFlags().StringP("cipher_key", "c", "", "cipher key for data encryption and decryption")
-	p := secret.PersistentFlags().StringP("path", "p", "file.txt", "path where will be file")
-	rootData := &root{cipherKey: ck, key: k, value: v, path: p, cmd: secret, version: nil}
-	// Loop through each option
-	for _, opt := range opts {
-		opt(rootData)
-	}
+	p := secret.PersistentFlags().StringP("path", "p", "file.txt", "the place where the key/value will be stored/got")
+	rootData := &root{cipherKey: ck, key: k, value: v, path: p, cmd: secret, options: version}
+
 	secret.AddCommand(rootData.getCmd())
 	secret.AddCommand(rootData.setCmd())
-	// return the modified root instance
+
 	return rootData
 }
 
@@ -67,7 +77,7 @@ func (r *root) setCmd() *cobra.Command {
 			var cr = crypto.NewCryptographer([]byte(*r.cipherKey))
 			ds, err := storage.NewFileVault(*r.path)
 			if err != nil {
-				return fmt.Errorf(" %w", err)
+				return fmt.Errorf("can't create storage by path: %w", err)
 			}
 			pr := provider.NewProvider(cr, ds)
 			err = pr.SetData([]byte(*r.key), []byte(*r.value))
@@ -89,12 +99,12 @@ func (r *root) getCmd() *cobra.Command {
 			var cr = crypto.NewCryptographer([]byte(*r.cipherKey))
 			ds, err := storage.NewFileVault(*r.path)
 			if err != nil {
-				return fmt.Errorf("root, getCmd method: %w", err)
+				return fmt.Errorf("can't get storage by path: %w", err)
 			}
 			pr := provider.NewProvider(cr, ds)
 			data, err := pr.GetData([]byte(*r.key))
 			if err != nil {
-				return fmt.Errorf("root, getCmd method: %w", err)
+				return fmt.Errorf("can't get data by key: %w", err)
 			}
 			fmt.Println(string(data))
 			return nil

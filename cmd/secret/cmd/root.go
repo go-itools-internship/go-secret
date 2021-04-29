@@ -20,10 +20,10 @@ type root struct {
 	cmd       *cobra.Command
 }
 
-type rootOptions func(*root)
+type RootOptions func(*root)
 
 // RootWithVersion is optional function can add version to root
-func RootWithVersion(version string) rootOptions {
+func RootWithVersion(version string) RootOptions {
 	return func(r *root) {
 		r.cmd.Version = version
 	}
@@ -36,7 +36,7 @@ func (r *root) Execute(ctx context.Context) error {
 
 // New function create and set flags and commands in cobra CLI
 // Version is optional field. You can use it if you want indicate version
-func New(opts ...rootOptions) *root {
+func New(opts ...RootOptions) *root {
 
 	var secret = &cobra.Command{
 		Use:   "secret",

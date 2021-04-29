@@ -16,26 +16,27 @@ type root struct {
 	cipherKey *string
 	value     *string
 	path      *string
-	rootCmd   *cobra.Command
+	cmd       *cobra.Command
 }
 
-func (r *root) RootExecute(ctx context.Context) error {
-	err := r.rootCmd.ExecuteContext(ctx)
-	return err
+func (r *root) Execute(ctx context.Context) error {
+	return r.cmd.ExecuteContext(ctx)
 }
 
-func NewRoot() *root {
-	var rootCmd = &cobra.Command{
-		Use:   "root",
-		Short: "root includes cli commands",
+func New(version string) *root {
+	var secret = &cobra.Command{
+		Use:     "secret",
+		Short:   "Root includes cli commands",
+		Long:    "Create CLI to set and get secrets via the command line",
+		Version: version,
 	}
-	v := rootCmd.PersistentFlags().StringP("value", "v", "", "value to provider")
-	k := rootCmd.PersistentFlags().StringP("key", "k", "", "key to provider")
-	ck := rootCmd.PersistentFlags().StringP("cipherKey", "c", "", "cipher key to provider")
-	p := rootCmd.PersistentFlags().StringP("path", "p", "file.txt", "path to provider")
-	rootData := &root{cipherKey: ck, key: k, value: v, path: p, rootCmd: rootCmd}
-	rootCmd.AddCommand(rootData.getCmd())
-	rootCmd.AddCommand(rootData.setCmd())
+	v := secret.PersistentFlags().StringP("value", "v", "", "value to be encrypted")
+	k := secret.PersistentFlags().StringP("key", "k", "", "key to encrypt value")
+	ck := secret.PersistentFlags().StringP("cipherKey", "c", "", "cipher key to cryptographer")
+	p := secret.PersistentFlags().StringP("path", "p", "file.txt", "path to file")
+	rootData := &root{cipherKey: ck, key: k, value: v, path: p, cmd: secret}
+	secret.AddCommand(rootData.getCmd())
+	secret.AddCommand(rootData.setCmd())
 	return rootData
 }
 

@@ -7,9 +7,14 @@ import (
 	"github.com/go-itools-internship/go-secret/cmd/secret/cmd"
 )
 
+var (
+	revision = "unknown"
+)
+
 func main() {
-	p := cmd.NewRoot()
-	err := p.RootExecute(context.Background())
+	fmt.Println("Hi from go-secret!")
+	p := cmd.New(revision)
+	err := p.Execute(context.Background())
 	if err != nil {
 		fmt.Println(err)
 	}

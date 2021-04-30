@@ -14,7 +14,7 @@ func TestRoot_Set(t *testing.T) {
 	t.Run("expect one keys", func(t *testing.T) {
 		key := "key value"
 		path := "testFile.txt"
-		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*2)
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
 		r := New()
@@ -47,7 +47,7 @@ func TestRoot_Set(t *testing.T) {
 		firstKey := "first key"
 		secondKey := "second key"
 		path := "testFile.txt"
-		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*2)
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
 		r := New()
@@ -85,7 +85,7 @@ func TestRoot_Get(t *testing.T) {
 	value := "60OBdPOOkSOu6kn8ZuMuXtAPVrUEFkPREydDwY6+ip/LrAFaHSc="
 	path := "testFile.txt"
 	file, err := os.Create(path)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*2)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	require.NoError(t, err)

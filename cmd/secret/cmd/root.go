@@ -45,22 +45,22 @@ func (r *root) Execute(ctx context.Context) error {
 // New function create and set flags and commands to the cobra CLI
 // RootOptions adds additional features to the cobra CLI
 func New(opts ...RootOptions) *root {
-	option := defaultOption
+	options := defaultOption
 	for _, opt := range opts {
-		opt(&option)
+		opt(&options)
 	}
 
 	var secret = &cobra.Command{
 		Use:     "secret",
 		Short:   "Contains commands to set and get encrypt data to storage",
 		Long:    "Create CLI to set and get secrets via the command line",
-		Version: option.version,
+		Version: options.version,
 	}
 	v := secret.PersistentFlags().StringP("value", "v", "", "value to be encrypted")
 	k := secret.PersistentFlags().StringP("key", "k", "", "key for pair key-value")
 	ck := secret.PersistentFlags().StringP("cipher-key", "c", "", "cipher key for data encryption and decryption")
 	p := secret.PersistentFlags().StringP("path", "p", "file.txt", "the place where the key/value will be stored/got")
-	rootData := &root{cipherKey: ck, key: k, value: v, path: p, cmd: secret, options: option}
+	rootData := &root{cipherKey: ck, key: k, value: v, path: p, cmd: secret, options: options}
 
 	secret.AddCommand(rootData.getCmd())
 	secret.AddCommand(rootData.setCmd())

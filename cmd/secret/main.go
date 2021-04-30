@@ -12,7 +12,6 @@ var (
 )
 
 func main() {
-	fmt.Println("Hi from go-secret!")
 	p := cmd.New(cmd.Version(revision))
 	err := p.Execute(context.Background())
 	if err != nil {

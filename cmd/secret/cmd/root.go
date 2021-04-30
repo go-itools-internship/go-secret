@@ -24,7 +24,7 @@ type options struct {
 	version string
 }
 
-var defaultOption = options{
+var defaultOptions = options{
 	version: "undefined",
 }
 
@@ -45,7 +45,7 @@ func (r *root) Execute(ctx context.Context) error {
 // New function create and set flags and commands to the cobra CLI
 // RootOptions adds additional features to the cobra CLI
 func New(opts ...RootOptions) *root {
-	options := defaultOption
+	options := defaultOptions
 	for _, opt := range opts {
 		opt(&options)
 	}

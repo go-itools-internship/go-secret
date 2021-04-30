@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -13,10 +14,12 @@ func TestRoot_Set(t *testing.T) {
 	t.Run("expect one keys", func(t *testing.T) {
 		key := "key value"
 		path := "testFile.txt"
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*2)
+		defer cancel()
 
 		r := New()
 		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--path", path})
-		err := r.Execute(context.Background())
+		err := r.Execute(ctx)
 		require.NoError(t, err)
 		defer func() {
 			require.NoError(t, os.Remove(path))
@@ -44,15 +47,17 @@ func TestRoot_Set(t *testing.T) {
 		firstKey := "first key"
 		secondKey := "second key"
 		path := "testFile.txt"
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*2)
+		defer cancel()
 
 		r := New()
 		r.cmd.SetArgs([]string{"set", "--key", firstKey, "--value", "test value", "--cipher-key", "ck", "--path", path})
-		err := r.Execute(context.Background())
+		err := r.Execute(ctx)
 		require.NoError(t, err)
 
 		r2 := New()
 		r2.cmd.SetArgs([]string{"set", "--key", secondKey, "--value", "test value", "--cipher-key", "ck", "--path", path})
-		err = r2.Execute(context.Background())
+		err = r2.Execute(ctx)
 		require.NoError(t, err)
 
 		require.NoError(t, err)
@@ -80,6 +85,9 @@ func TestRoot_Get(t *testing.T) {
 	value := "60OBdPOOkSOu6kn8ZuMuXtAPVrUEFkPREydDwY6+ip/LrAFaHSc="
 	path := "testFile.txt"
 	file, err := os.Create(path)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*2)
+	defer cancel()
+
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, os.Remove(path))
@@ -95,7 +103,7 @@ func TestRoot_Get(t *testing.T) {
 
 	r := New()
 	r.cmd.SetArgs([]string{"get", "--key", key, "--cipher-key", "ck", "--path", path})
-	executeErr := r.Execute(context.Background())
+	executeErr := r.Execute(ctx)
 	require.NoError(t, executeErr)
 
 	testFile, err := os.Open(path)
@@ -110,8 +118,8 @@ func TestRoot_Get(t *testing.T) {
 	var got string
 	require.Len(t, fileData, 1)
 	for _, value := range fileData {
-		got = value // we iterate one time to get first value
-		break
+		got = value
+		break // we iterate one time to get first value
 	}
 	require.EqualValues(t, value, got)
 }

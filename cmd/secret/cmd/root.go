@@ -24,13 +24,13 @@ type options struct {
 	version string
 }
 
-var defaultVersion = options{
+var defaultOption = options{
 	version: "undefined",
 }
 
 type RootOptions func(o *options)
 
-// Version is optional function can add version to root
+// Version is optional function can add version flag to root
 func Version(ver string) RootOptions {
 	return func(o *options) {
 		o.version = ver
@@ -42,25 +42,25 @@ func (r *root) Execute(ctx context.Context) error {
 	return r.cmd.ExecuteContext(ctx)
 }
 
-// New function create and set flags and commands in cobra CLI
-// Version is optional field. You can use it if you want indicate version
+// New function create and set flags and commands to the cobra CLI
+// RootOptions adds additional features to the cobra CLI
 func New(opts ...RootOptions) *root {
-	version := defaultVersion
+	option := defaultOption
 	for _, opt := range opts {
-		opt(&version)
+		opt(&option)
 	}
 
 	var secret = &cobra.Command{
 		Use:     "secret",
-		Short:   "Contains commands to set and get encrypt data",
+		Short:   "Contains commands to set and get encrypt data to storage",
 		Long:    "Create CLI to set and get secrets via the command line",
-		Version: version.version,
+		Version: option.version,
 	}
 	v := secret.PersistentFlags().StringP("value", "v", "", "value to be encrypted")
 	k := secret.PersistentFlags().StringP("key", "k", "", "key for pair key-value")
 	ck := secret.PersistentFlags().StringP("cipher-key", "c", "", "cipher key for data encryption and decryption")
 	p := secret.PersistentFlags().StringP("path", "p", "file.txt", "the place where the key/value will be stored/got")
-	rootData := &root{cipherKey: ck, key: k, value: v, path: p, cmd: secret, options: version}
+	rootData := &root{cipherKey: ck, key: k, value: v, path: p, cmd: secret, options: option}
 
 	secret.AddCommand(rootData.getCmd())
 	secret.AddCommand(rootData.setCmd())

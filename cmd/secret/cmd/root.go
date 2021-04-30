@@ -58,7 +58,7 @@ func New(opts ...RootOptions) *root {
 	}
 	v := secret.PersistentFlags().StringP("value", "v", "", "value to be encrypted")
 	k := secret.PersistentFlags().StringP("key", "k", "", "key for pair key-value")
-	ck := secret.PersistentFlags().StringP("cipher_key", "c", "", "cipher key for data encryption and decryption")
+	ck := secret.PersistentFlags().StringP("cipher-key", "c", "", "cipher key for data encryption and decryption")
 	p := secret.PersistentFlags().StringP("path", "p", "file.txt", "the place where the key/value will be stored/got")
 	rootData := &root{cipherKey: ck, key: k, value: v, path: p, cmd: secret, options: version}
 

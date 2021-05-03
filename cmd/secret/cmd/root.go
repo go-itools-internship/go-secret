@@ -5,6 +5,11 @@ import (
 	"context"
 	"fmt"
 
+	api "github.com/go-itools-internship/go-secret/pkg/http"
+
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
 	"github.com/go-itools-internship/go-secret/pkg/crypto"
 	"github.com/go-itools-internship/go-secret/pkg/io/storage"
 	"github.com/go-itools-internship/go-secret/pkg/provider"
@@ -56,6 +61,7 @@ func New(opts ...RootOptions) *root {
 		Long:    "Create CLI to set and get secrets via the command line",
 		Version: options.version,
 	}
+
 	v := secret.PersistentFlags().StringP("value", "v", "", "value to be encrypted")
 	k := secret.PersistentFlags().StringP("key", "k", "", "key for pair key-value")
 	ck := secret.PersistentFlags().StringP("cipher-key", "c", "", "cipher key for data encryption and decryption")
@@ -111,4 +117,21 @@ func (r *root) getCmd() *cobra.Command {
 		},
 	}
 	return getCmd
+}
+
+func (r *root) serverCmd() *cobra.Command {
+	var serverCmd = &cobra.Command{
+		Use:   "server",
+		Short: "Run server runner mode to start the app as a daemon",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			store := make(map[string]api.MethodFactoryFunc)
+			store[*r.key] = api.MethodFactoryFunc("key")
+
+			router := chi.NewRouter()
+			handler := api.NewMethods(store)
+			http.ListenAndServe()
+			return nil
+		},
+	}
+	return serverCmd
 }

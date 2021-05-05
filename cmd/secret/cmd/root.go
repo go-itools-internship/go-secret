@@ -4,10 +4,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/go-itools-internship/go-secret/pkg/secret"
+	"net/http"
 
 	api "github.com/go-itools-internship/go-secret/pkg/http"
-
-	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-itools-internship/go-secret/pkg/crypto"
@@ -54,14 +54,12 @@ func New(opts ...RootOptions) *root {
 	for _, opt := range opts {
 		opt(&options)
 	}
-
 	var secret = &cobra.Command{
 		Use:     "secret",
 		Short:   "Contains commands to set and get encrypt data to storage",
 		Long:    "Create CLI to set and get secrets via the command line",
 		Version: options.version,
 	}
-
 	v := secret.PersistentFlags().StringP("value", "v", "", "value to be encrypted")
 	k := secret.PersistentFlags().StringP("key", "k", "", "key for pair key-value")
 	ck := secret.PersistentFlags().StringP("cipher-key", "c", "", "cipher key for data encryption and decryption")
@@ -70,6 +68,7 @@ func New(opts ...RootOptions) *root {
 
 	secret.AddCommand(rootData.getCmd())
 	secret.AddCommand(rootData.setCmd())
+	secret.AddCommand(rootData.serverCmd())
 
 	return rootData
 }
@@ -124,12 +123,27 @@ func (r *root) serverCmd() *cobra.Command {
 		Use:   "server",
 		Short: "Run server runner mode to start the app as a daemon",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var cr = crypto.NewCryptographer([]byte(*r.cipherKey))
+			ds, err := storage.NewFileVault(*r.path)
+			if err != nil {
+				return fmt.Errorf("can't get storage by path: %w", err)
+			}
 			store := make(map[string]api.MethodFactoryFunc)
-			store[*r.key] = api.MethodFactoryFunc("key")
+			store["local"]  = func(cipher string) (secret.Provider, func()) {
+				return provider.NewProvider(cr, ds), nil
+			}
 
 			router := chi.NewRouter()
+
 			handler := api.NewMethods(store)
-			http.ListenAndServe()
+
+			router.Get("/", handler.GetByKey)
+			router.Post("/", handler.SetByKey)
+
+			err = http.ListenAndServe(":8888", router)
+			if err != nil {
+				return fmt.Errorf("connection error: %w", err)
+			}
 			return nil
 		},
 	}

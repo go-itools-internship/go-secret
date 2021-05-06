@@ -155,7 +155,7 @@ func (r *root) serverCmd() *cobra.Command {
 			router.Get("/", handler.GetByKey)
 			router.Post("/", handler.SetByKey)
 
-			srv := &http.Server{Addr: ":8888", Handler: router}
+			srv := &http.Server{Addr: ":"+port, Handler: router}
 
 			done := make(chan os.Signal, 1)
 			signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
@@ -187,7 +187,7 @@ func (r *root) serverCmd() *cobra.Command {
 	}
 	serverCmd.Flags().StringVarP(&cipherKey, "cipher-key", "c", cipherKey, "cipher key for data encryption and decryption")
 	serverCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
-	serverCmd.Flags().StringVarP(&port, "port", "t", port, "the place where the key/value will be stored/got")
+	serverCmd.Flags().StringVarP(&port, "port", "t", ":"+port, "the place where the key/value will be stored/got")
 
 	return serverCmd
 }

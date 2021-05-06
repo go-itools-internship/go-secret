@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -122,4 +123,52 @@ func TestRoot_Get(t *testing.T) {
 		break // we iterate one time to get first value
 	}
 	require.EqualValues(t, value, got)
+}
+
+func TestRoot_Server(t *testing.T) {
+	t.Run("expect success", func(t *testing.T) {
+
+		key := "key value"
+		path := "testFile.txt"
+		port := "8888"
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		r := New()
+		r.cmd.SetArgs([]string{"server", "--cipher-key", key, "--path", path, "--port", port})
+		var wg sync.WaitGroup
+		wg.Add(1) // в группе две горутины
+		work := func() {
+			defer wg.Done()
+			r := New()
+			r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--path", path})
+			err := r.Execute(ctx)
+			require.NoError(t, err)
+
+		}
+		go work()
+		wg.Wait()
+		
+		defer func() {
+			require.NoError(t, os.Remove(path))
+		}()
+
+		testFile, err := os.Open(path)
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, testFile.Close())
+		}()
+
+		fileData := make(map[string]string)
+		require.NoError(t, json.NewDecoder(testFile).Decode(&fileData))
+
+		var got string
+		require.Len(t, fileData, 1)
+		for key := range fileData {
+			got = key
+			break // we iterate one time to get first key
+		}
+		require.EqualValues(t, key, got)
+	})
+
 }

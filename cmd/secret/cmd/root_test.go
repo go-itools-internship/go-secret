@@ -1,10 +1,15 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	api "github.com/go-itools-internship/go-secret/pkg/http"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
-	"sync"
 	"testing"
 	"time"
 
@@ -15,7 +20,7 @@ func TestRoot_Set(t *testing.T) {
 	t.Run("expect one keys", func(t *testing.T) {
 		key := "key value"
 		path := "testFile.txt"
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 
 		r := New()
@@ -48,7 +53,7 @@ func TestRoot_Set(t *testing.T) {
 		firstKey := "first key"
 		secondKey := "second key"
 		path := "testFile.txt"
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 
 		r := New()
@@ -86,7 +91,7 @@ func TestRoot_Get(t *testing.T) {
 	value := "60OBdPOOkSOu6kn8ZuMuXtAPVrUEFkPREydDwY6+ip/LrAFaHSc="
 	path := "testFile.txt"
 	file, err := os.Create(path)
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	require.NoError(t, err)
@@ -126,49 +131,151 @@ func TestRoot_Get(t *testing.T) {
 }
 
 func TestRoot_Server(t *testing.T) {
-	t.Run("expect success", func(t *testing.T) {
+	key := "key-value"
+	path := "testFile.txt"
+	t.Run("set by key", func(t *testing.T) {
+		t.Run("expect set method success", func(t *testing.T) {
+			expectedSipherKey := "key value"
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
 
-		key := "key value"
-		path := "testFile.txt"
-		port := "8888"
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-
-		r := New()
-		r.cmd.SetArgs([]string{"server", "--cipher-key", key, "--path", path, "--port", port})
-		var wg sync.WaitGroup
-		wg.Add(1) // в группе две горутины
-		work := func() {
-			defer wg.Done()
 			r := New()
-			r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--path", path})
-			err := r.Execute(ctx)
+			r.cmd.SetArgs([]string{"server", "--cipher-key", key, "--path", path, "--port", "9999"})
+			go func() {
+				err := r.Execute(ctx)
+				require.Error(t, err)
+			}()
+
+			time.Sleep(2 * time.Second)
+
+			client := http.Client{Timeout: time.Second}
+			body := bytes.NewBufferString(`{"getter":"key-value","method":"local","value":"test-value-1"}`)
+			req := httptest.NewRequest(http.MethodPost, "http://localhost:9999/", body)
+			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
+			req.RequestURI = ""
+
+			resp, err := client.Do(req)
 			require.NoError(t, err)
+			require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
+			require.NoError(t, resp.Body.Close())
 
-		}
-		go work()
-		wg.Wait()
-		
-		defer func() {
-			require.NoError(t, os.Remove(path))
-		}()
+			defer func() {
+				require.NoError(t, os.Remove(path))
+			}()
+		})
 
-		testFile, err := os.Open(path)
-		require.NoError(t, err)
-		defer func() {
-			require.NoError(t, testFile.Close())
-		}()
+		t.Run("expect url not found error", func(t *testing.T) {
+			expectedSipherKey := "key value"
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
 
-		fileData := make(map[string]string)
-		require.NoError(t, json.NewDecoder(testFile).Decode(&fileData))
+			r := New()
+			r.cmd.SetArgs([]string{"server", "--cipher-key", key, "--path", path, "--port", "9999"})
 
-		var got string
-		require.Len(t, fileData, 1)
-		for key := range fileData {
-			got = key
-			break // we iterate one time to get first key
-		}
-		require.EqualValues(t, key, got)
+			client := http.Client{Timeout: time.Second}
+			body := bytes.NewBufferString(`{"getter":"key-value","method":"local","value":"test-value-1"}`)
+			req := httptest.NewRequest(http.MethodPost, "http://localhost:9999/error", body)
+			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
+			req.RequestURI = ""
+
+			go func() {
+				err := r.Execute(ctx)
+				require.Error(t, err)
+			}()
+			time.Sleep(2 * time.Second)
+
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusNotFound, resp.StatusCode)
+			require.NoError(t, resp.Body.Close())
+
+			defer func() {
+				require.NoError(t, os.Remove(path))
+			}()
+		})
 	})
 
+	t.Run("get by key", func(t *testing.T) {
+		t.Run("get method success", func(t *testing.T) {
+			port := "9999"
+			expectedSipherKey := "key value"
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+
+			r := New()
+			r.cmd.SetArgs([]string{"server", "--cipher-key", key, "--path", path, "--port", port})
+
+			go func() {
+				err := r.Execute(ctx)
+				require.Error(t, err)
+			}()
+			time.Sleep(2 * time.Second)
+
+			client := http.Client{Timeout: time.Second}
+
+			body := bytes.NewBufferString(`{"getter":"key-value","method":"local","value":"test-value-1"}`)
+			req := httptest.NewRequest(http.MethodPost, "http://localhost:9999/", body)
+			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
+			req.RequestURI = ""
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
+			require.NoError(t, resp.Body.Close())
+
+			req = httptest.NewRequest(http.MethodGet, "http://localhost:9999/", nil)
+			req.RequestURI = ""
+			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
+			query := req.URL.Query()
+			query.Set(api.ParamGetterKey, key)
+			query.Set(api.ParamMethodKey, "local")
+			req.URL.RawQuery = query.Encode()
+
+			resp, err = client.Do(req)
+			require.NoError(t, err)
+			respBody, err := ioutil.ReadAll(resp.Body)
+			fmt.Println(string(respBody))
+			require.EqualValues(t, http.StatusOK, resp.StatusCode)
+			require.NoError(t, resp.Body.Close())
+
+			defer func() {
+				require.NoError(t, os.Remove(path))
+			}()
+		})
+
+		t.Run("get method with error, when key does not exist on server", func(t *testing.T) {
+			invalidKey := "invalid-key"
+			port := "9999"
+			require.NotEqual(t, key, invalidKey)
+
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			expectedSipherKey := "key value"
+			r := New()
+			r.cmd.SetArgs([]string{"server", "--cipher-key", key, "--path", path, "--port", port})
+
+			client := http.Client{Timeout: time.Second}
+			req := httptest.NewRequest(http.MethodGet, "http://localhost:9999/", nil)
+			req.RequestURI = ""
+			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
+			query := req.URL.Query()
+			query.Set(api.ParamGetterKey, invalidKey)
+			query.Set(api.ParamMethodKey, "local")
+			req.URL.RawQuery = query.Encode()
+
+			go func() {
+				err := r.Execute(ctx)
+				require.Error(t, err)
+			}()
+			time.Sleep(2 * time.Second)
+
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusInternalServerError, resp.StatusCode)
+			require.NoError(t, resp.Body.Close())
+
+			defer func() {
+				require.NoError(t, os.Remove(path))
+			}()
+		})
+	})
 }

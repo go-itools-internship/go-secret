@@ -187,7 +187,7 @@ func (r *root) serverCmd() *cobra.Command {
 	}
 	serverCmd.Flags().StringVarP(&cipherKey, "cipher-key", "c", cipherKey, "cipher key for data encryption and decryption")
 	serverCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
-	serverCmd.Flags().StringVarP(&port, "port", "t", ":"+port, "the place where the key/value will be stored/got")
+	serverCmd.Flags().StringVarP(&port, "port", "t", "8888", "the place where the key/value will be stored/got")
 
 	return serverCmd
 }

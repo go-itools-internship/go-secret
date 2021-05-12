@@ -4,14 +4,15 @@ package cmd
 import (
 	"context"
 	"fmt"
-	api "github.com/go-itools-internship/go-secret/pkg/http"
-	"github.com/go-itools-internship/go-secret/pkg/secret"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	api "github.com/go-itools-internship/go-secret/pkg/http"
+	secretApi "github.com/go-itools-internship/go-secret/pkg/secret"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-itools-internship/go-secret/pkg/crypto"
@@ -146,7 +147,7 @@ func (r *root) serverCmd() *cobra.Command {
 				return fmt.Errorf("can't get storage by path: %w", err)
 			}
 			store := make(map[string]api.MethodFactoryFunc)
-			store["local"] = func(cipher string) (secret.Provider, func()) {
+			store["local"] = func(cipher string) (secretApi.Provider, func()) {
 				return provider.NewProvider(cr, ds), nil
 			}
 

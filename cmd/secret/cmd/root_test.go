@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	api "github.com/go-itools-internship/go-secret/pkg/http"
-	"github.com/phayes/freeport"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -15,6 +13,9 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	api "github.com/go-itools-internship/go-secret/pkg/http"
+	"github.com/phayes/freeport"
 
 	"github.com/stretchr/testify/require"
 )
@@ -212,6 +213,7 @@ func TestRoot_Server(t *testing.T) {
 			resp, err = client.Do(req)
 			require.NoError(t, err)
 			respBody, err := ioutil.ReadAll(resp.Body)
+			require.NoError(t, err)
 			fmt.Println(string(respBody))
 			require.EqualValues(t, http.StatusOK, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())

@@ -227,6 +227,7 @@ func TestRoot_Server(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 			expectedSipherKey := "key value"
+
 			port := createAndExecuteCliCommand(ctx, t)
 
 			client := http.Client{Timeout: time.Second}
@@ -282,7 +283,6 @@ func createAndExecuteCliCommand(ctx context.Context, t *testing.T) (freePort str
 	key := "key-value"
 	path := "testFile.txt"
 	port, err := freeport.GetFreePort()
-	fmt.Println(strconv.Itoa(port))
 	if err != nil {
 		log.Fatal(err)
 	}

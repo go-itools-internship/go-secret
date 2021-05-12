@@ -82,11 +82,11 @@ func (a *methods) GetByKey(w http.ResponseWriter, r *http.Request) {
 //
 // Example of request body:
 //
-//     {
-//         "getter": "cloud-key",
-//         "method": "memory",
-//         "value": "123-456"
-//     }
+//    {
+//        "getter": "cloud-key",
+//        "method": "memory",
+//        "value": "123-456"
+//    }
 func (a *methods) SetByKey(w http.ResponseWriter, r *http.Request) {
 	var requestBody struct {
 		GetterKey  string `json:"getter"`

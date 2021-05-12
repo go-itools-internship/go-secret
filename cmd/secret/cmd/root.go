@@ -21,8 +21,8 @@ import (
 )
 
 type root struct {
-	options   options
-	cmd       *cobra.Command
+	options options
+	cmd     *cobra.Command
 }
 
 type options struct {
@@ -155,7 +155,7 @@ func (r *root) serverCmd() *cobra.Command {
 			router.Get("/", handler.GetByKey)
 			router.Post("/", handler.SetByKey)
 
-			srv := &http.Server{Addr: ":"+port, Handler: router}
+			srv := &http.Server{Addr: ":" + port, Handler: router}
 
 			done := make(chan os.Signal, 1)
 			signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)

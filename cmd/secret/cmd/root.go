@@ -172,7 +172,7 @@ func (r *root) serverCmd() *cobra.Command {
 			log.Println("Server stopped")
 
 			shutdownCh := make(chan struct{})
-			go func(channel chan struct{}) {
+			go func() {
 				defer close(shutdownCh)
 				ctx, cancel := context.WithTimeout(cmd.Context(), 5*time.Second)
 				defer cancel()
@@ -180,7 +180,7 @@ func (r *root) serverCmd() *cobra.Command {
 				if err != nil {
 					fmt.Println("Server Shutdown Failed", err)
 				}
-			}(shutdownCh)
+			}()
 			<-shutdownCh
 			log.Println("Server exit")
 			return nil

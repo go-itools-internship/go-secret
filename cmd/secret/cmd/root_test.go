@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -280,7 +279,7 @@ func createAndExecuteCliCommand(ctx context.Context) (freePort string) {
 	path := "testFile.txt"
 	port, err := GetFreePort()
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 	r := New()
 	r.cmd.SetArgs([]string{"server", "--cipher-key", key, "--path", path, "--port", strconv.Itoa(port)})

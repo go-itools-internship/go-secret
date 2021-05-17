@@ -4,7 +4,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -168,7 +167,7 @@ func (r *root) serverCmd() *cobra.Command {
 					fmt.Println("connection error: %w", err)
 				}
 			}()
-			log.Println("Server started")
+			fmt.Println("Server started")
 
 			select {
 			case <-done:
@@ -187,7 +186,7 @@ func (r *root) serverCmd() *cobra.Command {
 				}
 			}(context.Background())
 			<-shutdownCh
-			log.Println("Server exit")
+			fmt.Println("Server exit")
 
 			return nil
 		},

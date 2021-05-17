@@ -9,9 +9,6 @@ github.com/inconshreveable/mousetrap
 ## explicit
 # github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e
 ## explicit
-# github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
-## explicit
-github.com/phayes/freeport
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/spf13/cobra v1.1.3

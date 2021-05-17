@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,8 +16,6 @@ import (
 	"time"
 
 	api "github.com/go-itools-internship/go-secret/pkg/http"
-	"github.com/phayes/freeport"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -143,7 +142,10 @@ func TestRoot_Server(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 			// get free port after cli creating
-			port := createAndExecuteCliCommand(ctx, t)
+			port := createAndExecuteCliCommand(ctx)
+			defer func() {
+				require.NoError(t, os.Remove(path))
+			}()
 
 			client := http.Client{Timeout: time.Second}
 			body := bytes.NewBufferString(`{"getter":"key-value","method":"local","value":"test-value-1"}`)
@@ -155,17 +157,16 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
-
-			defer func() {
-				require.NoError(t, os.Remove(path))
-			}()
 		})
 		t.Run("expect url not found error", func(t *testing.T) {
 			expectedSipherKey := "key value"
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 
-			port := createAndExecuteCliCommand(ctx, t)
+			port := createAndExecuteCliCommand(ctx)
+			defer func() {
+				require.NoError(t, os.Remove(path))
+			}()
 
 			client := http.Client{Timeout: time.Second}
 			body := bytes.NewBufferString(`{"getter":"key-value","method":"local","value":"test-value-1"}`)
@@ -177,10 +178,6 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusNotFound, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
-
-			defer func() {
-				require.NoError(t, os.Remove(path))
-			}()
 		})
 	})
 	t.Run("get by key", func(t *testing.T) {
@@ -189,7 +186,10 @@ func TestRoot_Server(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 
-			port := createAndExecuteCliCommand(ctx, t)
+			port := createAndExecuteCliCommand(ctx)
+			defer func() {
+				require.NoError(t, os.Remove(path))
+			}()
 
 			client := http.Client{Timeout: time.Second}
 
@@ -217,10 +217,6 @@ func TestRoot_Server(t *testing.T) {
 			fmt.Println(string(respBody))
 			require.EqualValues(t, http.StatusOK, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
-
-			defer func() {
-				require.NoError(t, os.Remove(path))
-			}()
 		})
 		t.Run("get method with error, when url not found error", func(t *testing.T) {
 			invalidKey := "invalid-key"
@@ -230,7 +226,10 @@ func TestRoot_Server(t *testing.T) {
 			defer cancel()
 			expectedSipherKey := "key value"
 
-			port := createAndExecuteCliCommand(ctx, t)
+			port := createAndExecuteCliCommand(ctx)
+			defer func() {
+				require.NoError(t, os.Remove(path))
+			}()
 
 			client := http.Client{Timeout: time.Second}
 			req := httptest.NewRequest(http.MethodGet, "http://localhost:"+port+"/errorUrl", nil)
@@ -245,10 +244,6 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusNotFound, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
-
-			defer func() {
-				require.NoError(t, os.Remove(path))
-			}()
 		})
 		t.Run("get method with error, when key does not exist on server", func(t *testing.T) {
 			invalidKey := "invalid-key"
@@ -258,7 +253,10 @@ func TestRoot_Server(t *testing.T) {
 			defer cancel()
 			expectedSipherKey := "key value"
 
-			port := createAndExecuteCliCommand(ctx, t)
+			port := createAndExecuteCliCommand(ctx)
+			defer func() {
+				require.NoError(t, os.Remove(path))
+			}()
 
 			client := http.Client{Timeout: time.Second}
 			req := httptest.NewRequest(http.MethodGet, "http://localhost:"+port, nil)
@@ -273,18 +271,14 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusInternalServerError, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
-
-			defer func() {
-				require.NoError(t, os.Remove(path))
-			}()
 		})
 	})
 }
 
-func createAndExecuteCliCommand(ctx context.Context, t *testing.T) (freePort string) {
+func createAndExecuteCliCommand(ctx context.Context) (freePort string) {
 	key := "key-value"
 	path := "testFile.txt"
-	port, err := freeport.GetFreePort()
+	port, err := GetFreePort()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -292,8 +286,29 @@ func createAndExecuteCliCommand(ctx context.Context, t *testing.T) (freePort str
 	r.cmd.SetArgs([]string{"server", "--cipher-key", key, "--path", path, "--port", strconv.Itoa(port)})
 	go func() {
 		err := r.Execute(ctx)
-		require.Error(t, err)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}()
 	time.Sleep(2 * time.Second)
 	return strconv.Itoa(port)
+}
+
+func GetFreePort() (int, error) {
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		return 0, err
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return 0, err
+	}
+	defer func(l *net.TCPListener) {
+		err := l.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}(l)
+	return l.Addr().(*net.TCPAddr).Port, nil
 }

@@ -48,7 +48,7 @@ func (r *root) Execute(ctx context.Context) error {
 	return r.cmd.ExecuteContext(ctx)
 }
 
-// New function create and set flags and commands to the cobra CLI
+// New function create commands to the cobra CLI
 // RootOptions adds additional features to the cobra CLI
 func New(opts ...RootOptions) *root {
 	options := defaultOptions
@@ -128,7 +128,7 @@ func (r *root) getCmd() *cobra.Command {
 	}
 	getCmd.Flags().StringVarP(&key, "key", "k", key, "key for pair key-value")
 	getCmd.Flags().StringVarP(&cipherKey, "cipher-key", "c", cipherKey, "cipher key for data encryption and decryption")
-	getCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
+	getCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the value will be got")
 
 	return getCmd
 }
@@ -159,6 +159,7 @@ func (r *root) serverCmd() *cobra.Command {
 			srv := &http.Server{Addr: ":" + port, Handler: router}
 
 			done := make(chan os.Signal, 1)
+			shutdownCh := make(chan struct{})
 			signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 			go func() {
@@ -168,27 +169,32 @@ func (r *root) serverCmd() *cobra.Command {
 				}
 			}()
 			log.Println("Server started")
-			<-done
-			log.Println("Server stopped")
 
-			shutdownCh := make(chan struct{})
-			go func() {
+			select {
+			case <-done:
+				fmt.Println("Server stopped")
+			case <-cmd.Context().Done():
+				fmt.Println("Server stopped with context")
+			}
+
+			go func(ctx context.Context) {
 				defer close(shutdownCh)
-				ctx, cancel := context.WithTimeout(cmd.Context(), 5*time.Second)
+				ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 				defer cancel()
 				err = srv.Shutdown(ctx)
 				if err != nil {
 					fmt.Println("Server Shutdown Failed", err)
 				}
-			}()
+			}(context.Background())
 			<-shutdownCh
 			log.Println("Server exit")
+
 			return nil
 		},
 	}
 	serverCmd.Flags().StringVarP(&cipherKey, "cipher-key", "c", cipherKey, "cipher key for data encryption and decryption")
 	serverCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
-	serverCmd.Flags().StringVarP(&port, "port", "t", "8888", "the place where the key/value will be stored/got")
+	serverCmd.Flags().StringVarP(&port, "port", "t", "8888", "localhost address")
 
 	return serverCmd
 }

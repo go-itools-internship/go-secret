@@ -133,20 +133,19 @@ func (r *root) getCmd() *cobra.Command {
 }
 
 func (r *root) serverCmd() *cobra.Command {
-	var cipherKey string
 	var path string
 	var port string
 	var serverCmd = &cobra.Command{
 		Use:   "server",
 		Short: "Run server runner mode to start the app as a daemon",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var cr = crypto.NewCryptographer([]byte(cipherKey))
 			ds, err := storage.NewFileVault(path)
 			if err != nil {
 				return fmt.Errorf("can't get storage by path: %w", err)
 			}
 			store := make(map[string]api.MethodFactoryFunc)
 			store["local"] = func(cipher string) (secretApi.Provider, func()) {
+				cr := crypto.NewCryptographer([]byte(cipher))
 				return provider.NewProvider(cr, ds), nil
 			}
 
@@ -191,7 +190,6 @@ func (r *root) serverCmd() *cobra.Command {
 			return nil
 		},
 	}
-	serverCmd.Flags().StringVarP(&cipherKey, "cipher-key", "c", cipherKey, "cipher key for data encryption and decryption")
 	serverCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
 	serverCmd.Flags().StringVarP(&port, "port", "t", "8888", "localhost address")
 

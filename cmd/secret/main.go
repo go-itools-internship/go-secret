@@ -13,7 +13,9 @@ var (
 
 func main() {
 	p := cmd.New(cmd.Version(revision))
-	err := p.Execute(context.Background())
+	ctx := context.Background()
+
+	err := p.Execute(ctx)
 	if err != nil {
 		fmt.Println(err)
 	}

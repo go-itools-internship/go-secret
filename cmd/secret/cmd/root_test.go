@@ -217,6 +217,44 @@ func TestRoot_Server(t *testing.T) {
 			require.EqualValues(t, http.StatusOK, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
 		})
+		t.Run("error when used wrong cipher key", func(t *testing.T) {
+			wrongSipherKey := "wrong key"
+			expectedSipherKey := "key value"
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+
+			port := createAndExecuteCliCommand(ctx)
+			defer func() {
+				require.NoError(t, os.Remove(path))
+			}()
+
+			client := http.Client{Timeout: time.Second}
+
+			body := bytes.NewBufferString(`{"getter":"key-value","method":"local","value":"test-value-1"}`)
+			req := httptest.NewRequest(http.MethodPost, "http://localhost:"+port, body)
+			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
+			req.RequestURI = ""
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
+			require.NoError(t, resp.Body.Close())
+
+			req = httptest.NewRequest(http.MethodGet, "http://localhost:"+port, nil)
+			req.RequestURI = ""
+			req.Header.Set(api.ParamCipherKey, wrongSipherKey)
+			query := req.URL.Query()
+			query.Set(api.ParamGetterKey, key)
+			query.Set(api.ParamMethodKey, "local")
+			req.URL.RawQuery = query.Encode()
+
+			resp, err = client.Do(req)
+			require.NoError(t, err)
+			respBody, err := ioutil.ReadAll(resp.Body)
+			require.NoError(t, err)
+			fmt.Println(string(respBody))
+			require.EqualValues(t, http.StatusInternalServerError, resp.StatusCode)
+			require.NoError(t, resp.Body.Close())
+		})
 		t.Run("get method with error, when url not found error", func(t *testing.T) {
 			invalidKey := "invalid-key"
 			require.NotEqual(t, key, invalidKey)
@@ -275,14 +313,13 @@ func TestRoot_Server(t *testing.T) {
 }
 
 func createAndExecuteCliCommand(ctx context.Context) (freePort string) {
-	key := "key-value"
 	path := "testFile.txt"
 	port, err := GetFreePort()
 	if err != nil {
 		fmt.Println(err)
 	}
 	r := New()
-	r.cmd.SetArgs([]string{"server", "--cipher-key", key, "--path", path, "--port", strconv.Itoa(port)})
+	r.cmd.SetArgs([]string{"server", "--path", path, "--port", strconv.Itoa(port)})
 	go func() {
 		err := r.Execute(ctx)
 		if err != nil {

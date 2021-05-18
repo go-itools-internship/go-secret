@@ -4,6 +4,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -42,17 +43,19 @@ func (c *client) GetByKey(cipherKey string, key string, ctx context.Context) (da
 	return "", nil
 }
 
-func (c *client) SetByKey(cipherKey string, key string, value string) error {
+func (c *client) SetByKey(cipherKey string, getterKey string, value string, method string) error {
 	//req := httptest.NewRequest(http.MethodPost, "http://localhost:"+port, body)
-	body := bytes.NewBufferString(`{"getter":"key-value","method":"local","value":""}`)
+	postBody, _ := json.Marshal(map[string]string{
+		"getter": getterKey,
+		"method": method,
+		"value":  value,
+	})
+	body := bytes.NewBuffer(postBody)
 	req, err := http.NewRequest(http.MethodPost, c.url, body)
 	if err != nil {
 		return fmt.Errorf("can't create request %w", err)
 	}
 	req.Header.Set(api.ParamCipherKey, cipherKey)
-	req.Header.Set(api.ParamMethodKey, "")
-	req.Header.Set(api.ParamGetterKey, key)
-	req.Header.Set("value", value)
 	req.RequestURI = ""
 
 	resp, err := c.client.Do(req)

@@ -39,13 +39,11 @@ func (c *client) GetByKey(cipherKey string, key string, ctx context.Context) (da
 	fmt.Println(resp)
 	//I must get and return data
 	//data :=
-
 	return "", nil
 }
 
 func (c *client) SetByKey(cipherKey string, key string, value string) error {
 	//req := httptest.NewRequest(http.MethodPost, "http://localhost:"+port, body)
-
 	body := bytes.NewBufferString(`{"getter":"key-value","method":"local","value":""}`)
 	req, err := http.NewRequest(http.MethodPost, c.url, body)
 	if err != nil {

@@ -2,17 +2,19 @@ package client
 
 import (
 	"fmt"
-	"net/http/httptest"
 	"testing"
 )
 
 func TestClient_SetByKey(t *testing.T) {
 
 	//srv := &http.Server{Addr: ":" + port, Handler: func() {}} // handler for server
-	srvHttp := httptest.NewServer()
+	//srvHttp := httptest.NewServer()
+	cipherKey := "c-key"
+	key := "key"
+	value := "test-value"
 
 	client := New("key")
-	err := client.SetByKey()
+	err := client.SetByKey(cipherKey, key, value)
 	if err != nil {
 		fmt.Println(err)
 	}

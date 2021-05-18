@@ -5,5 +5,5 @@ RUN make build
 
 FROM alpine:latest
 COPY --from=builder /go-secret/secret .
-ENTRYPOINT ["./secret", "get"]
-CMD ["localhost"]
+ENTRYPOINT ["./secret"]
+CMD ["server"]

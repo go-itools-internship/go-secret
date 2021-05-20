@@ -45,14 +45,14 @@ func (c *client) GetByKey(ctx context.Context, key string, cipherKey string, met
 
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("can't read responce data %w", err)
+		return "", fmt.Errorf("secret client: can't read responce data %w", err)
 	}
-	//
+
 	var responseBody struct {
 		Value string `json:"value"`
 	}
 	if err := json.Unmarshal(data, &responseBody); err != nil {
-		return "", fmt.Errorf("cannot write response: %w", err)
+		return "", fmt.Errorf("secret client: cannot write response: %w", err)
 	}
 	return responseBody.Value, nil
 }
@@ -66,17 +66,17 @@ func (c *client) SetByKey(ctx context.Context, getterKey string, value string, m
 	body := bytes.NewBuffer(postBody)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url, body)
 	if err != nil {
-		return fmt.Errorf("can't create request %w", err)
+		return fmt.Errorf("secret client: can't create request %w", err)
 	}
 	req.Header.Set(api.ParamCipherKey, cipherKey)
 	req.RequestURI = ""
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("can't create responce %w", err)
+		return fmt.Errorf("secret client: can't create responce %w", err)
 	}
 	if resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("can't set data %w", err)
+		return fmt.Errorf("secret client: can't set data %w", err)
 	}
 	fmt.Println(resp)
 	return nil

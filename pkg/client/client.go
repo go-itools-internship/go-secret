@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -40,12 +41,17 @@ func (c *client) GetByKey(ctx context.Context, key string, cipherKey string, met
 
 	resp, err := c.client.Do(req)
 	if resp != nil {
-		defer resp.Body.Close()
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				fmt.Println(err)
+			}
+		}(resp.Body)
 	}
 
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("secret client: can't read responce data %w", err)
+		return "", fmt.Errorf("secret client: can't read response data %w", err)
 	}
 
 	var responseBody struct {
@@ -58,7 +64,7 @@ func (c *client) GetByKey(ctx context.Context, key string, cipherKey string, met
 }
 
 func (c *client) SetByKey(ctx context.Context, getterKey string, value string, method string, cipherKey string) error {
-	postBody, _ := json.Marshal(map[string]string{
+	postBody, err := json.Marshal(map[string]string{
 		"getter": getterKey,
 		"method": method,
 		"value":  value,
@@ -73,7 +79,7 @@ func (c *client) SetByKey(ctx context.Context, getterKey string, value string, m
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("secret client: can't create responce %w", err)
+		return fmt.Errorf("secret client: can't create response %w", err)
 	}
 	if resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("secret client: can't set data %w", err)

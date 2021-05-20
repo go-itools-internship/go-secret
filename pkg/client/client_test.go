@@ -34,7 +34,8 @@ func TestClient_SetByKey(t *testing.T) {
 		})
 		t.Run("context error,when set by key with closed context", func(t *testing.T) {
 			ctx := context.Background()
-			ctx, _ = context.WithTimeout(ctx, 10*time.Millisecond)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
+			defer cancel()
 			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				time.Sleep(100 * time.Millisecond)
 				w.WriteHeader(http.StatusNoContent)

@@ -3,6 +3,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -14,62 +15,69 @@ import (
 
 type client struct {
 	client http.Client
-	url    string
+	url    string // address where client will be work with server
 }
 
+// New function creates client with timeout
 func New(url string) *client {
 	client1 := http.Client{Timeout: time.Second}
 	newClient := &client{client: client1, url: url}
 	return newClient
 }
 
-func (c *client) GetByKey(cipherKey string, key string) (data string, err error) {
-	req, err := http.NewRequest(http.MethodGet, c.url, nil)
+func (c *client) GetByKey(ctx context.Context, key string, cipherKey string, method string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.url, nil)
 	if err != nil {
-		return "", fmt.Errorf("can't create request %w", err)
+		return "", fmt.Errorf("secret client: can't create request %w", err)
 	}
 	req.RequestURI = ""
 	req.Header.Set(api.ParamCipherKey, cipherKey)
+
 	query := req.URL.Query()
 	query.Set(api.ParamGetterKey, key)
-	query.Set(api.ParamMethodKey, "cloud")
+	query.Set(api.ParamMethodKey, method)
 	req.URL.RawQuery = query.Encode()
 
 	resp, err := c.client.Do(req)
-	//defer resp.Body.Close()
-	fmt.Println(resp)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
 
-	//type Data struct{
-	//	getter string
-	//	method string
-	//	value string
-	//}
-	//data1 := json.NewDecoder(resp.Body)
-	//data1.Decode()
-	body, err := ioutil.ReadAll(resp.Body)
-	//I must get and return data
-	//data :=
-	return string(body), nil
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("can't read responce data %w", err)
+	}
+	//
+	var responseBody struct {
+		Value string `json:"value"`
+	}
+	if err := json.Unmarshal(data, &responseBody); err != nil {
+		return "", fmt.Errorf("cannot write response: %w", err)
+	}
+	return responseBody.Value, nil
 }
 
-func (c *client) SetByKey(cipherKey string, getterKey string, value string, method string) (error, *http.Response) {
+func (c *client) SetByKey(ctx context.Context, getterKey string, value string, method string, cipherKey string) error {
 	postBody, _ := json.Marshal(map[string]string{
 		"getter": getterKey,
 		"method": method,
 		"value":  value,
 	})
 	body := bytes.NewBuffer(postBody)
-	req, err := http.NewRequest(http.MethodPost, c.url, body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url, body)
 	if err != nil {
-		return fmt.Errorf("can't create request %w", err), nil
+		return fmt.Errorf("can't create request %w", err)
 	}
 	req.Header.Set(api.ParamCipherKey, cipherKey)
 	req.RequestURI = ""
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("can't create responce %w", err), nil
+		return fmt.Errorf("can't create responce %w", err)
+	}
+	if resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("can't set data %w", err)
 	}
 	fmt.Println(resp)
-	return nil, resp
+	return nil
 }

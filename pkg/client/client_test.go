@@ -32,7 +32,7 @@ func TestClient_SetByKey(t *testing.T) {
 			require.NoError(t, err)
 			require.EqualValues(t, path, s.URL)
 		})
-		t.Run("context error,when set by key with closed context", func(t *testing.T) {
+		t.Run("context error if set by key with closed context", func(t *testing.T) {
 			ctx := context.Background()
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
 			defer cancel()
@@ -86,7 +86,7 @@ func TestClient_GetByKey(t *testing.T) {
 
 			path := s.URL
 			client := New(path)
-			data, err := client.GetByKey(ctx, getter, cipherKey, method)
+			data, err := client.GetByKey(ctx, getter, method, cipherKey)
 			require.NoError(t, err)
 
 			require.EqualValues(t, requestData, data)
@@ -104,7 +104,7 @@ func TestClient_GetByKey(t *testing.T) {
 
 			path := s.URL
 			client := New(path + "wrong-url")
-			data, err := client.GetByKey(ctx, getter, cipherKey, method)
+			data, err := client.GetByKey(ctx, getter, method, cipherKey)
 			require.NotEqualValues(t, requestData, data)
 			require.NotEqualValues(t, s.URL, client.url)
 			require.Error(t, err)

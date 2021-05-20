@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -26,7 +25,7 @@ func New(url string) *client {
 	return newClient
 }
 
-func (c *client) GetByKey(ctx context.Context, key string, cipherKey string, method string) (string, error) {
+func (c *client) GetByKey(ctx context.Context, key, method, cipherKey string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.url, nil)
 	if err != nil {
 		return "", fmt.Errorf("secret client: can't create request %w", err)
@@ -40,14 +39,14 @@ func (c *client) GetByKey(ctx context.Context, key string, cipherKey string, met
 	req.URL.RawQuery = query.Encode()
 
 	resp, err := c.client.Do(req)
-	if resp != nil {
-		defer func(Body io.ReadCloser) {
-			err := Body.Close()
-			if err != nil {
-				fmt.Println(err)
-			}
-		}(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("secret client: can't do response %w", err)
 	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			fmt.Println("cannot close request body: ", err.Error())
+		}
+	}()
 
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -63,12 +62,15 @@ func (c *client) GetByKey(ctx context.Context, key string, cipherKey string, met
 	return responseBody.Value, nil
 }
 
-func (c *client) SetByKey(ctx context.Context, getterKey string, value string, method string, cipherKey string) error {
+func (c *client) SetByKey(ctx context.Context, getterKey, value, method, cipherKey string) error {
 	postBody, err := json.Marshal(map[string]string{
 		"getter": getterKey,
 		"method": method,
 		"value":  value,
 	})
+	if err != nil {
+		return fmt.Errorf("secret client: can't marshal body %w", err)
+	}
 	body := bytes.NewBuffer(postBody)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url, body)
 	if err != nil {

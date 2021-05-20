@@ -14,23 +14,23 @@ import (
 )
 
 type client struct {
-	client http.Client
-	url    string // address where client will be work with server
+	client http.Client // TODO client options
+	url    string      // address where client will be work with server
 }
 
 // New function creates client with timeout
 func New(url string) *client {
-	client1 := http.Client{Timeout: time.Second}
+	client1 := http.Client{Timeout: 20 * time.Second}
 	newClient := &client{client: client1, url: url}
 	return newClient
 }
 
+// GetByKey get data from server by key method and cipher key
 func (c *client) GetByKey(ctx context.Context, key, method, cipherKey string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.url, nil)
 	if err != nil {
 		return "", fmt.Errorf("secret client: can't create request %w", err)
 	}
-	req.RequestURI = ""
 	req.Header.Set(api.ParamCipherKey, cipherKey)
 
 	query := req.URL.Query()
@@ -48,20 +48,21 @@ func (c *client) GetByKey(ctx context.Context, key, method, cipherKey string) (s
 		}
 	}()
 
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("secret client: can't read response data %w", err)
-	}
-
 	var responseBody struct {
 		Value string `json:"value"`
 	}
-	if err := json.Unmarshal(data, &responseBody); err != nil {
-		return "", fmt.Errorf("secret client: cannot write response: %w", err)
+
+	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
+		return "", fmt.Errorf("cannot decode body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("wrong status code: %d %s", resp.StatusCode, responseBody)
 	}
 	return responseBody.Value, nil
 }
 
+// SetByKey set data to server by  getterKey, value, method, cipherKey
 func (c *client) SetByKey(ctx context.Context, getterKey, value, method, cipherKey string) error {
 	postBody, err := json.Marshal(map[string]string{
 		"getter": getterKey,
@@ -77,15 +78,23 @@ func (c *client) SetByKey(ctx context.Context, getterKey, value, method, cipherK
 		return fmt.Errorf("secret client: can't create request %w", err)
 	}
 	req.Header.Set(api.ParamCipherKey, cipherKey)
-	req.RequestURI = ""
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("secret client: can't create response %w", err)
+		return fmt.Errorf("secret client: can't do request %w", err)
 	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			fmt.Println("cannot close request body: ", err.Error())
+		}
+	}()
+
 	if resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("secret client: can't set data %w", err)
+		responseBody, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("secret client: can't get response body %w", err)
+		}
+		return fmt.Errorf("secret client: can't set data: body: %q, status code: %d", responseBody, resp.StatusCode)
 	}
-	fmt.Println(resp)
 	return nil
 }

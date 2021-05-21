@@ -23,7 +23,7 @@ func TestClient_SetByKey(t *testing.T) {
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			require.EqualValues(t, "/", r.URL.Path)
 			require.EqualValues(t, http.MethodPost, r.Method)
-			require.EqualValues(t, r.Header.Get(api.ParamCipherKey), cipherKey)
+			require.EqualValues(t, cipherKey, r.Header.Get(api.ParamCipherKey))
 			w.WriteHeader(http.StatusNoContent)
 
 			var requestBody struct {
@@ -96,9 +96,9 @@ func TestClient_GetByKey(t *testing.T) {
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			require.EqualValues(t, "/", r.URL.Path)
 			require.EqualValues(t, http.MethodGet, r.Method)
-			require.EqualValues(t, r.Header.Get(api.ParamCipherKey), cipherKey)
-			require.EqualValues(t, r.URL.Query().Get(api.ParamGetterKey), getter)
-			require.EqualValues(t, r.URL.Query().Get(api.ParamMethodKey), method)
+			require.EqualValues(t, cipherKey, r.Header.Get(api.ParamCipherKey))
+			require.EqualValues(t, getter, r.URL.Query().Get(api.ParamGetterKey))
+			require.EqualValues(t, method, r.URL.Query().Get(api.ParamMethodKey))
 			testJSON := `{"value":"Test value"}`
 			_, err := w.Write([]byte(testJSON))
 			require.NoError(t, err)

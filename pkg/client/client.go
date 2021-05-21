@@ -23,16 +23,16 @@ type options struct {
 	c *http.Client
 }
 
-var defaultClient = options{
+var defaultOptions = options{
 	c: &http.Client{Timeout: 20 * time.Second},
 }
 
 type Option func(o *options)
 
 // Client provide any http client
-func Client(c http.Client) Option {
+func Client(c *http.Client) Option {
 	return func(options *options) {
-		options.c = &c
+		options.c = c
 	}
 }
 
@@ -40,7 +40,7 @@ func Client(c http.Client) Option {
 //
 // Accepts url where client will be work with server and client options.
 func New(url string, opts ...Option) *client {
-	options := defaultClient
+	options := defaultOptions
 	for _, opt := range opts {
 		opt(&options)
 	}

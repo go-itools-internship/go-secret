@@ -62,21 +62,22 @@ func TestClient_SetByKey(t *testing.T) {
 			w.WriteHeader(http.StatusNoContent)
 		}))
 		defer s.Close()
-		wrongUrl := "http://127.0.0.1:8888"
-		c := New(wrongUrl)
-		require.NotEqual(t, s.URL, wrongUrl)
+		wrongURL := "http://127.0.0.1:8888"
+		c := New(wrongURL)
+		require.NotEqual(t, s.URL, wrongURL)
 		err := c.SetByKey(ctx, getter, value, method, cipherKey)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "secret client: can't do request")
 	})
 	t.Run("expected error when impossible create request", func(t *testing.T) {
+		ctx := context.Background()
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
 		}))
 		defer s.Close()
-
+		ctx = nil
 		c := New(s.URL)
-		err := c.SetByKey(nil, getter, value, method, cipherKey)
+		err := c.SetByKey(ctx, getter, value, method, cipherKey)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "secret client: can't create request ")
 	})
@@ -108,8 +109,8 @@ func TestClient_GetByKey(t *testing.T) {
 			require.EqualValues(t, r.Header.Get(api.ParamCipherKey), cipherKey)
 			require.EqualValues(t, r.URL.Query().Get(api.ParamGetterKey), getter)
 			require.EqualValues(t, r.URL.Query().Get(api.ParamMethodKey), method)
-			testJson := `{"value":"Test value"}`
-			_, err := w.Write([]byte(testJson))
+			testJSON := `{"value":"Test value"}`
+			_, err := w.Write([]byte(testJSON))
 			require.NoError(t, err)
 		}))
 		defer s.Close()
@@ -124,15 +125,15 @@ func TestClient_GetByKey(t *testing.T) {
 		ctx := context.Background()
 
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			testJson := `{"value":"Test value"}`
-			_, err := w.Write([]byte(testJson))
+			j := `{"value":"Test value"}`
+			_, err := w.Write([]byte(j))
 			require.NoError(t, err)
 		}))
 		defer s.Close()
 
-		wrongUrl := "http://127.0.0.1:8888"
-		c := New(wrongUrl)
-		require.NotEqual(t, s.URL, wrongUrl)
+		wrongURL := "http://127.0.0.1:8888"
+		c := New(wrongURL)
+		require.NotEqual(t, s.URL, wrongURL)
 		data, err := c.GetByKey(ctx, getter, method, cipherKey)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "secret client: can't do response")
@@ -154,8 +155,8 @@ func TestClient_GetByKey(t *testing.T) {
 		ctx := context.Background()
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
-			testJson := `{"value":"test bad request body"}`
-			_, err := w.Write([]byte(testJson))
+			j := `{"value":"test bad request body"}`
+			_, err := w.Write([]byte(j))
 			require.NoError(t, err)
 
 		}))

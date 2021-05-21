@@ -69,19 +69,6 @@ func TestClient_SetByKey(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "secret client: can't do request")
 	})
-	t.Run("expected error when impossible create request", func(t *testing.T) {
-		ctx := context.TODO()
-		ctx = nil
-		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNoContent)
-		}))
-		defer s.Close()
-
-		c := New(s.URL)
-		err := c.SetByKey(ctx, getter, value, method, cipherKey)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "secret client: can't create request ")
-	})
 	t.Run("expected error if wrong status code", func(t *testing.T) {
 		ctx := context.Background()
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

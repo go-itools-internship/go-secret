@@ -22,6 +22,7 @@ func TestClient_SetByKey(t *testing.T) {
 		ctx := context.Background()
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			require.EqualValues(t, "/", r.URL.Path)
+			require.EqualValues(t, http.MethodPost, r.Method)
 			require.EqualValues(t, r.Header.Get(api.ParamCipherKey), cipherKey)
 			w.WriteHeader(http.StatusNoContent)
 
@@ -94,6 +95,7 @@ func TestClient_GetByKey(t *testing.T) {
 		ctx := context.Background()
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			require.EqualValues(t, "/", r.URL.Path)
+			require.EqualValues(t, http.MethodGet, r.Method)
 			require.EqualValues(t, r.Header.Get(api.ParamCipherKey), cipherKey)
 			require.EqualValues(t, r.URL.Query().Get(api.ParamGetterKey), getter)
 			require.EqualValues(t, r.URL.Query().Get(api.ParamMethodKey), method)
@@ -111,7 +113,6 @@ func TestClient_GetByKey(t *testing.T) {
 	})
 	t.Run("expected error if server does not respond", func(t *testing.T) {
 		ctx := context.Background()
-
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			j := `{"value":"Test value"}`
 			_, err := w.Write([]byte(j))
@@ -143,10 +144,8 @@ func TestClient_GetByKey(t *testing.T) {
 		ctx := context.Background()
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
-			j := `{"value":"test bad request body"}`
-			_, err := w.Write([]byte(j))
+			_, err := w.Write([]byte("test bad request body"))
 			require.NoError(t, err)
-
 		}))
 		defer s.Close()
 

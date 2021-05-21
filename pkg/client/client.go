@@ -14,31 +14,32 @@ import (
 )
 
 type client struct {
-	options Options
+	options options
 	url     string // address where client will be work with server
 }
 
-// Options client
-type Options struct {
-	c http.Client
+// options client
+type options struct {
+	c *http.Client
 }
 
-var defaultClient = Options{
-	c: http.Client{Timeout: 20 * time.Second},
+var defaultClient = options{
+	c: &http.Client{Timeout: 20 * time.Second},
 }
 
-type OptionsOfClient func(o *Options)
+type Option func(o *options)
 
 // Client provide any http client
-func Client(c http.Client) OptionsOfClient {
-	return func(options *Options) {
-		options.c = c
+func Client(c http.Client) Option {
+	return func(options *options) {
+		options.c = &c
 	}
 }
 
-// New function initializes a structure that provides client accessing functions
-// Accepts url where client will be work with server and client options
-func New(url string, opts ...OptionsOfClient) *client {
+// New function initializes a structure that provides client accessing functions.
+//
+// Accepts url where client will be work with server and client options.
+func New(url string, opts ...Option) *client {
 	options := defaultClient
 	for _, opt := range opts {
 		opt(&options)
@@ -47,11 +48,15 @@ func New(url string, opts ...OptionsOfClient) *client {
 	return newClient
 }
 
-// GetByKey get data from server by key method and cipher key
-// key for pair key-value
-// cipher key for data encryption and decryption
-// method to choose different providers
+// GetByKey get data from server by key method and cipher key.
+// 	Key for pair key-value.
+// 	Cipher key for data encryption and decryption.
+// 	Method to choose different providers.
 func (c *client) GetByKey(ctx context.Context, key, method, cipherKey string) (string, error) {
+	var responseBody struct {
+		Value string `json:"value"`
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.url, nil)
 	if err != nil {
 		return "", fmt.Errorf("secret client: can't create request %w", err)
@@ -72,25 +77,24 @@ func (c *client) GetByKey(ctx context.Context, key, method, cipherKey string) (s
 			fmt.Println("secret client: cannot close request body: ", err.Error())
 		}
 	}()
-
-	var responseBody struct {
-		Value string `json:"value"`
+	if resp.StatusCode != http.StatusOK {
+		responseBody, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return "", fmt.Errorf("secret client: can't get response body %w", err)
+		}
+		return "", fmt.Errorf("secret client: can't get data: body: %q, status code: %d", responseBody, resp.StatusCode)
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
 		return "", fmt.Errorf("secret client: cannot decode body: %w", err)
 	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("secret client: can't get data: body: %q, status code: %d", responseBody.Value, resp.StatusCode)
-	}
 	return responseBody.Value, nil
 }
 
-// SetByKey set data to server by getterKey, value, method, cipherKey
-// getterKey for pair key-value
-// cipher key to set data encryption
-// method to choose different providers
+// SetByKey set data to server by getterKey, value, method, cipherKey.
+// 	GetterKey for pair key-value.
+// 	Cipher key to set data encryption.
+// 	Method to choose different providers.
 func (c *client) SetByKey(ctx context.Context, getterKey, value, method, cipherKey string) error {
 	postBody, err := json.Marshal(map[string]string{
 		"getter": getterKey,
@@ -116,7 +120,6 @@ func (c *client) SetByKey(ctx context.Context, getterKey, value, method, cipherK
 			fmt.Println("secret client: cannot close request body: ", err.Error())
 		}
 	}()
-
 	if resp.StatusCode != http.StatusNoContent {
 		responseBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {

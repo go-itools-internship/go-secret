@@ -32,9 +32,9 @@ func TestClient_SetByKey(t *testing.T) {
 				Value      string `json:"value"`
 			}
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&requestBody))
-			require.EqualValues(t, requestBody.Value, value)
-			require.EqualValues(t, requestBody.MethodType, method)
-			require.EqualValues(t, requestBody.GetterKey, getter)
+			require.EqualValues(t, value, requestBody.Value)
+			require.EqualValues(t, method, requestBody.MethodType)
+			require.EqualValues(t, getter, requestBody.GetterKey)
 		}))
 		defer s.Close()
 

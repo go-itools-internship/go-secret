@@ -57,7 +57,7 @@ func (c *client) GetByKey(ctx context.Context, key, method, cipherKey string) (s
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("wrong status code: %d %s", resp.StatusCode, responseBody)
+		return "", fmt.Errorf("secret client: can't get data: body: %q, status code: %d", responseBody.Value, resp.StatusCode)
 	}
 	return responseBody.Value, nil
 }

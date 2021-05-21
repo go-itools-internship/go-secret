@@ -93,8 +93,6 @@ func TestClient_SetByKey(t *testing.T) {
 		err := c.SetByKey(ctx, getter, value, method, cipherKey)
 		require.Error(t, err)
 		require.EqualValues(t, "secret client: can't set data: body: \"test bad request body\", status code: 400", err.Error())
-
-		//TODO check response body
 	})
 }
 
@@ -110,8 +108,8 @@ func TestClient_GetByKey(t *testing.T) {
 			require.EqualValues(t, r.Header.Get(api.ParamCipherKey), cipherKey)
 			require.EqualValues(t, r.URL.Query().Get(api.ParamGetterKey), getter)
 			require.EqualValues(t, r.URL.Query().Get(api.ParamMethodKey), method)
-			json := `{"value":"Test value"}`
-			_, err := w.Write([]byte(json))
+			testJson := `{"value":"Test value"}`
+			_, err := w.Write([]byte(testJson))
 			require.NoError(t, err)
 		}))
 		defer s.Close()
@@ -121,14 +119,13 @@ func TestClient_GetByKey(t *testing.T) {
 		data, err := c.GetByKey(ctx, getter, method, cipherKey)
 		require.NoError(t, err)
 		require.EqualValues(t, requestData, data)
-		//TODO check response body
 	})
 	t.Run("expected error if server does not respond", func(t *testing.T) {
 		ctx := context.Background()
 
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			json := `{"value":"Test value"}`
-			_, err := w.Write([]byte(json))
+			testJson := `{"value":"Test value"}`
+			_, err := w.Write([]byte(testJson))
 			require.NoError(t, err)
 		}))
 		defer s.Close()
@@ -157,17 +154,16 @@ func TestClient_GetByKey(t *testing.T) {
 		ctx := context.Background()
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
-			json := `{"value":"Test value"}`
-			_, err := w.Write([]byte(json))
+			testJson := `{"value":"test bad request body"}`
+			_, err := w.Write([]byte(testJson))
 			require.NoError(t, err)
 
 		}))
 		defer s.Close()
 
 		c := New(s.URL)
-		data, err := c.GetByKey(ctx, getter, method, cipherKey)
+		_, err := c.GetByKey(ctx, getter, method, cipherKey)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "wrong status code")
-		require.Empty(t, data)
+		require.EqualValues(t, "secret client: can't get data: body: \"test bad request body\", status code: 400", err.Error())
 	})
 }

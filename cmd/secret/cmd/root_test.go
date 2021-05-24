@@ -309,6 +309,33 @@ func TestRoot_Server(t *testing.T) {
 			require.EqualValues(t, http.StatusInternalServerError, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
 		})
+		t.Run("middleware check success", func(t *testing.T) {
+
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			expectedSipherKey := "key value"
+
+			port := createAndExecuteCliCommand(ctx)
+			middlewarePort := port + "/ping"
+			defer func() {
+				require.NoError(t, os.Remove(path))
+			}()
+
+			client := http.Client{Timeout: time.Second}
+			req := httptest.NewRequest(http.MethodGet, "http://localhost:"+middlewarePort, nil)
+			req.RequestURI = ""
+			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
+			query := req.URL.Query()
+			query.Set(api.ParamGetterKey, key)
+			query.Set(api.ParamMethodKey, "local")
+			req.URL.RawQuery = query.Encode()
+
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusOK, resp.StatusCode)
+			require.EqualValues(t, "text/plain", resp.Header.Get("Content-Type"))
+			require.NoError(t, resp.Body.Close())
+		})
 	})
 }
 

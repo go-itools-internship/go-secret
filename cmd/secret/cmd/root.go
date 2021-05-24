@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
+
 	api "github.com/go-itools-internship/go-secret/pkg/http"
 	secretApi "github.com/go-itools-internship/go-secret/pkg/secret"
 
@@ -151,11 +153,15 @@ func (r *root) serverCmd() *cobra.Command {
 
 			handler := api.NewMethods(store)
 			router := chi.NewRouter()
-			router.Get("/", handler.GetByKey)
-			router.Post("/", handler.SetByKey)
 
 			srv := &http.Server{Addr: ":" + port, Handler: router}
-
+			//router.With(middleware.Heartbeat("/ping")).Route("/ping", func(r chi.Router) {
+			//	router.Get("/", handler.GetByKey)
+			//	router.Post("/", handler.SetByKey)
+			//})
+			router.Use(middleware.Heartbeat("/ping"))
+			router.Get("/", handler.GetByKey)
+			router.Post("/", handler.SetByKey)
 			done := make(chan os.Signal, 1)
 			shutdownCh := make(chan struct{})
 			signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)

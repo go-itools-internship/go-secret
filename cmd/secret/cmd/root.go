@@ -195,6 +195,29 @@ func (r *root) serverCmd() *cobra.Command {
 	}
 	serverCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
 	serverCmd.Flags().StringVarP(&port, "port", "t", "8888", "localhost address")
-
+	serverCmd.AddCommand(r.serverPingCmd())
 	return serverCmd
+}
+func (r *root) serverPingCmd() *cobra.Command {
+	var url string
+	var port string
+	var route string
+	var serverPingCmd = &cobra.Command{
+		Use:   "ping",
+		Short: "Run server runner mode to start the app as a daemon",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			resp, err := http.Get(url + ":" + port + route)
+			if err != nil {
+				return err
+			}
+			if resp.StatusCode != http.StatusOK {
+				return fmt.Errorf("server response not expected: wrong status code %d", resp.StatusCode)
+			}
+			return nil
+		},
+	}
+	serverPingCmd.Flags().StringVarP(&port, "port", "t", "8880", "localhost port")
+	serverPingCmd.Flags().StringVarP(&route, "route", "r", "/ping", "localhost route")
+	serverPingCmd.Flags().StringVarP(&url, "url", "u", "http://localhost", "localhost address")
+	return serverPingCmd
 }

@@ -329,6 +329,41 @@ func TestRoot_Server(t *testing.T) {
 	})
 }
 
+func TestRoot_ServerPing(t *testing.T) {
+
+	t.Run("expect get server ping success", func(t *testing.T) {
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			require.EqualValues(t, http.MethodGet, r.Method)
+			require.EqualValues(t, "/ping", r.URL.Path)
+		}))
+		defer s.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		r := New()
+		r.cmd.SetArgs([]string{"server", "ping", "--url", s.URL, "--port", "", "--route", "/ping"})
+
+		err := r.Execute(ctx)
+		require.NoError(t, err)
+	})
+	t.Run("expect get server ping with error", func(t *testing.T) {
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+
+		}))
+		defer s.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		r := New()
+		r.cmd.SetArgs([]string{"server", "ping", "--url", s.URL, "--port", "", "--route", "/ping"})
+
+		err := r.Execute(ctx)
+		require.Error(t, err)
+		require.EqualValues(t, "server response not expected: wrong status code 404", err.Error())
+	})
+}
+
 func createAndExecuteCliCommand(ctx context.Context) (freePort string) {
 	path := "testFile.txt"
 	port, err := GetFreePort()

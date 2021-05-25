@@ -81,7 +81,6 @@ func TestRoot_Set(t *testing.T) {
 
 		fileData := make(map[string]string)
 		require.NoError(t, json.NewDecoder(testFile).Decode(&fileData))
-
 		require.Len(t, fileData, 2)
 		require.Contains(t, fileData, firstKey)
 		require.Contains(t, fileData, secondKey)
@@ -211,10 +210,35 @@ func TestRoot_Server(t *testing.T) {
 
 			resp, err = client.Do(req)
 			require.NoError(t, err)
-			respBody, err := ioutil.ReadAll(resp.Body)
+			_, err = ioutil.ReadAll(resp.Body)
 			require.NoError(t, err)
-			fmt.Println(string(respBody))
 			require.EqualValues(t, http.StatusOK, resp.StatusCode)
+			require.NoError(t, resp.Body.Close())
+		})
+		t.Run("middleware check success", func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			expectedSipherKey := "key value"
+
+			port := createAndExecuteCliCommand(ctx)
+			middlewarePort := port + "/ping"
+			defer func() {
+				require.NoError(t, os.Remove(path))
+			}()
+
+			client := http.Client{Timeout: time.Second}
+			req := httptest.NewRequest(http.MethodGet, "http://localhost:"+middlewarePort, nil)
+			req.RequestURI = ""
+			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
+			query := req.URL.Query()
+			query.Set(api.ParamGetterKey, key)
+			query.Set(api.ParamMethodKey, "local")
+			req.URL.RawQuery = query.Encode()
+
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusOK, resp.StatusCode)
+			require.EqualValues(t, "text/plain", resp.Header.Get("Content-Type"))
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("error when used wrong cipher key", func(t *testing.T) {
@@ -249,9 +273,8 @@ func TestRoot_Server(t *testing.T) {
 
 			resp, err = client.Do(req)
 			require.NoError(t, err)
-			respBody, err := ioutil.ReadAll(resp.Body)
+			_, err = ioutil.ReadAll(resp.Body)
 			require.NoError(t, err)
-			fmt.Println(string(respBody))
 			require.EqualValues(t, http.StatusInternalServerError, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
 		})
@@ -307,33 +330,6 @@ func TestRoot_Server(t *testing.T) {
 			resp, err := client.Do(req)
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusInternalServerError, resp.StatusCode)
-			require.NoError(t, resp.Body.Close())
-		})
-		t.Run("middleware check success", func(t *testing.T) {
-
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-			defer cancel()
-			expectedSipherKey := "key value"
-
-			port := createAndExecuteCliCommand(ctx)
-			middlewarePort := port + "/ping"
-			defer func() {
-				require.NoError(t, os.Remove(path))
-			}()
-
-			client := http.Client{Timeout: time.Second}
-			req := httptest.NewRequest(http.MethodGet, "http://localhost:"+middlewarePort, nil)
-			req.RequestURI = ""
-			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
-			query := req.URL.Query()
-			query.Set(api.ParamGetterKey, key)
-			query.Set(api.ParamMethodKey, "local")
-			req.URL.RawQuery = query.Encode()
-
-			resp, err := client.Do(req)
-			require.NoError(t, err)
-			require.EqualValues(t, http.StatusOK, resp.StatusCode)
-			require.EqualValues(t, "text/plain", resp.Header.Get("Content-Type"))
 			require.NoError(t, resp.Body.Close())
 		})
 	})

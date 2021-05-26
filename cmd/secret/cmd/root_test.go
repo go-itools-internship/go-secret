@@ -340,7 +340,7 @@ func TestRoot_ServerPing(t *testing.T) {
 		defer s.Close()
 
 		// Parse server url for wright flags format
-		sUrl, h, p := urlParse(s.URL)
+		sUrl, h, p := ParseUrl(s.URL)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
@@ -348,7 +348,7 @@ func TestRoot_ServerPing(t *testing.T) {
 		r.cmd.SetArgs([]string{"server", "ping", "--url", fmt.Sprintf("%s://%s", sUrl.Scheme, h), "--port", p, "--route", route})
 		require.NoError(t, r.Execute(ctx))
 	})
-	t.Run("expect get server ping with error", func(t *testing.T) {
+	t.Run("error when response status is not found", func(t *testing.T) {
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 			_, err := w.Write([]byte("test request body"))
@@ -356,7 +356,7 @@ func TestRoot_ServerPing(t *testing.T) {
 		}))
 		defer s.Close()
 		// Parse server url for wright flags format
-		sUrl, h, p := urlParse(s.URL)
+		sUrl, h, p := ParseUrl(s.URL)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
@@ -366,7 +366,7 @@ func TestRoot_ServerPing(t *testing.T) {
 		require.Error(t, err)
 		require.EqualValues(t, "server response is not expected: body \"test request body\", wrong status code 404", err.Error())
 	})
-	t.Run("expect get server pings with connection error", func(t *testing.T) {
+	t.Run("error when server connection refused", func(t *testing.T) {
 		testUrl := "http://localhost"
 		port := "8880"
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -375,10 +375,10 @@ func TestRoot_ServerPing(t *testing.T) {
 		r.cmd.SetArgs([]string{"server", "ping", "--url", testUrl, "--port", port, "--route", route})
 		err := r.Execute(ctx)
 		require.Error(t, err)
-		require.EqualValues(t, fmt.Sprintf("server response error: Get %q: dial tcp 127.0.0.1:%s: connect: connection refused",
-			fmt.Sprintf("%s:%s%s", testUrl, port, route), port), err.Error())
+		require.Contains(t, err.Error(), fmt.Sprintf("server response error: Get %q:", fmt.Sprintf("%s:%s%s", testUrl, port, route)))
+		require.Contains(t, err.Error(), fmt.Sprintf("%s: connect: connection refused", port))
 	})
-	t.Run("expect get server ping with timeout error", func(t *testing.T) {
+	t.Run("error when request time to make a request is over", func(t *testing.T) {
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			require.EqualValues(t, http.MethodGet, r.Method)
 			require.EqualValues(t, route, r.URL.Path)
@@ -386,20 +386,19 @@ func TestRoot_ServerPing(t *testing.T) {
 		}))
 		defer s.Close()
 		// Parse server url for wright flags format
-		sUrl, h, p := urlParse(s.URL)
+		sUrl, h, p := ParseUrl(s.URL)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		r := New()
 		r.cmd.SetArgs([]string{"server", "ping", "--url", fmt.Sprintf("%s://%s", sUrl.Scheme, h), "--port", p, "--route", route, "--timeout", "2s"})
 		err := r.Execute(ctx)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "Client.Timeout exceeded while awaiting headers")
-
 	})
 }
 
-func urlParse(s string) (*url.URL, string, string) {
+func ParseUrl(s string) (*url.URL, string, string) {
 	serverUrl, err := url.Parse(s)
 	if err != nil {
 		fmt.Println(err)

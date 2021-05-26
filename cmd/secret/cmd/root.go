@@ -70,6 +70,7 @@ func New(opts ...RootOptions) *root {
 	secret.AddCommand(rootData.getCmd())
 	secret.AddCommand(rootData.serverCmd())
 	secret.SilenceUsage = true // write false if you want to see options when an error occurs
+	secret.SilenceErrors = true
 
 	return rootData
 }
@@ -233,9 +234,9 @@ func (r *root) serverPingCmd() *cobra.Command {
 			return nil
 		},
 	}
-	serverPingCmd.Flags().StringVarP(&port, "port", "p", "8880", "port to connect. Default: '8880")
-	serverPingCmd.Flags().StringVarP(&route, "route", "r", "/ping", "url route. Default: '/ping'")
-	serverPingCmd.Flags().StringVarP(&url, "url", "u", "http://localhost", "url for server checking. Default: 'http://localhost'")
+	serverPingCmd.Flags().StringVarP(&port, "port", "p", "8880", "port to connect. Address shouldn't have port. Default: '8880")
+	serverPingCmd.Flags().StringVarP(&route, "route", "r", "/ping", "host check route. Default: '/ping'")
+	serverPingCmd.Flags().StringVarP(&url, "url", "u", "http://localhost", "url for server checking. Url shouldn't contain port. Default: 'http://localhost'")
 	serverPingCmd.Flags().DurationVarP(&timeout, "timeout", "t", 15*time.Second, "max request time to make a request. Default: '15 seconds'")
 	return serverPingCmd
 }

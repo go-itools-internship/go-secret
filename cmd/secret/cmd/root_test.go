@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strconv"
 	"testing"
@@ -81,7 +82,6 @@ func TestRoot_Set(t *testing.T) {
 
 		fileData := make(map[string]string)
 		require.NoError(t, json.NewDecoder(testFile).Decode(&fileData))
-
 		require.Len(t, fileData, 2)
 		require.Contains(t, fileData, firstKey)
 		require.Contains(t, fileData, secondKey)
@@ -211,10 +211,29 @@ func TestRoot_Server(t *testing.T) {
 
 			resp, err = client.Do(req)
 			require.NoError(t, err)
-			respBody, err := ioutil.ReadAll(resp.Body)
+			_, err = ioutil.ReadAll(resp.Body)
 			require.NoError(t, err)
-			fmt.Println(string(respBody))
 			require.EqualValues(t, http.StatusOK, resp.StatusCode)
+			require.NoError(t, resp.Body.Close())
+		})
+		t.Run("middleware check success", func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+
+			port := createAndExecuteCliCommand(ctx)
+
+			defer func() {
+				require.NoError(t, os.Remove(path))
+			}()
+
+			client := http.Client{Timeout: time.Second}
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost:%s/ping", port), nil)
+			req.RequestURI = ""
+
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusOK, resp.StatusCode)
+			require.EqualValues(t, "text/plain", resp.Header.Get("Content-Type"))
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("error when used wrong cipher key", func(t *testing.T) {
@@ -249,9 +268,8 @@ func TestRoot_Server(t *testing.T) {
 
 			resp, err = client.Do(req)
 			require.NoError(t, err)
-			respBody, err := ioutil.ReadAll(resp.Body)
+			_, err = ioutil.ReadAll(resp.Body)
 			require.NoError(t, err)
-			fmt.Println(string(respBody))
 			require.EqualValues(t, http.StatusInternalServerError, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
 		})
@@ -310,6 +328,86 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 	})
+}
+
+func TestRoot_ServerPing(t *testing.T) {
+	route := "/ping"
+	t.Run("success", func(t *testing.T) {
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			require.EqualValues(t, http.MethodGet, r.Method)
+			require.EqualValues(t, route, r.URL.Path)
+		}))
+		defer s.Close()
+
+		// Parse server url for wright flags format
+		sURL, h, p := ParseURL(s.URL)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		r := New()
+		r.cmd.SetArgs([]string{"server", "ping", "--url", fmt.Sprintf("%s://%s", sURL.Scheme, h), "--port", p, "--route", route})
+		require.NoError(t, r.Execute(ctx))
+	})
+	t.Run("error when response status is not found", func(t *testing.T) {
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+			_, err := w.Write([]byte("test request body"))
+			require.NoError(t, err)
+		}))
+		defer s.Close()
+		// Parse server url for wright flags format
+		sURL, h, p := ParseURL(s.URL)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		r := New()
+		r.cmd.SetArgs([]string{"server", "ping", "--url", fmt.Sprintf("%s://%s", sURL.Scheme, h), "--port", p, "--route", route})
+		err := r.Execute(ctx)
+		require.Error(t, err)
+		require.EqualValues(t, "server response is not expected: body \"test request body\", wrong status code 404", err.Error())
+	})
+	t.Run("error when server connection refused", func(t *testing.T) {
+		testURL := "http://localhost"
+		port := "8880"
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		r := New()
+		r.cmd.SetArgs([]string{"server", "ping", "--url", testURL, "--port", port, "--route", route})
+		err := r.Execute(ctx)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), fmt.Sprintf("server response error: Get %q:", fmt.Sprintf("%s:%s%s", testURL, port, route)))
+		require.Contains(t, err.Error(), fmt.Sprintf("%s: connect: connection refused", port))
+	})
+	t.Run("error when request time to make a request is over", func(t *testing.T) {
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			require.EqualValues(t, http.MethodGet, r.Method)
+			require.EqualValues(t, route, r.URL.Path)
+			time.Sleep(3 * time.Second)
+		}))
+		defer s.Close()
+		// Parse server url for wright flags format
+		sURL, h, p := ParseURL(s.URL)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		r := New()
+		r.cmd.SetArgs([]string{"server", "ping", "--url", fmt.Sprintf("%s://%s", sURL.Scheme, h), "--port", p, "--route", route, "--timeout", "2s"})
+		err := r.Execute(ctx)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "Client.Timeout exceeded while awaiting headers")
+	})
+}
+
+func ParseURL(s string) (*url.URL, string, string) {
+	serverURL, err := url.Parse(s)
+	if err != nil {
+		fmt.Println(err)
+	}
+	h, p, err := net.SplitHostPort(serverURL.Host)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return serverURL, h, p
 }
 
 func createAndExecuteCliCommand(ctx context.Context) (freePort string) {

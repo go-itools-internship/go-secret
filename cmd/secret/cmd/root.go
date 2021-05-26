@@ -4,11 +4,14 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/go-chi/chi/v5/middleware"
 
 	api "github.com/go-itools-internship/go-secret/pkg/http"
 	secretApi "github.com/go-itools-internship/go-secret/pkg/secret"
@@ -66,6 +69,7 @@ func New(opts ...RootOptions) *root {
 	secret.AddCommand(rootData.setCmd())
 	secret.AddCommand(rootData.getCmd())
 	secret.AddCommand(rootData.serverCmd())
+	secret.SilenceUsage = true // write false if you want to see options when an error occurs
 
 	return rootData
 }
@@ -151,10 +155,11 @@ func (r *root) serverCmd() *cobra.Command {
 
 			handler := api.NewMethods(store)
 			router := chi.NewRouter()
+			srv := &http.Server{Addr: ":" + port, Handler: router}
+
+			router.Use(middleware.Heartbeat("/ping"))
 			router.Get("/", handler.GetByKey)
 			router.Post("/", handler.SetByKey)
-
-			srv := &http.Server{Addr: ":" + port, Handler: router}
 
 			done := make(chan os.Signal, 1)
 			shutdownCh := make(chan struct{})
@@ -166,13 +171,13 @@ func (r *root) serverCmd() *cobra.Command {
 					fmt.Println("connection error: %w", err)
 				}
 			}()
-			fmt.Println("Server started")
+			fmt.Println("server started")
 
 			select {
 			case <-done:
-				fmt.Println("Server stopped")
+				fmt.Println("server stopped")
 			case <-cmd.Context().Done():
-				fmt.Println("Server stopped with context")
+				fmt.Println("server stopped with context")
 			}
 
 			go func(ctx context.Context) {
@@ -181,17 +186,56 @@ func (r *root) serverCmd() *cobra.Command {
 				defer cancel()
 				err = srv.Shutdown(ctx)
 				if err != nil {
-					fmt.Println("Server Shutdown Failed", err)
+					fmt.Println("server Shutdown Failed", err)
 				}
 			}(context.Background())
 			<-shutdownCh
-			fmt.Println("Server exit")
+			fmt.Println("server exit")
 
 			return nil
 		},
 	}
 	serverCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
 	serverCmd.Flags().StringVarP(&port, "port", "t", "8888", "localhost address")
-
+	serverCmd.AddCommand(r.serverPingCmd())
 	return serverCmd
+}
+
+func (r *root) serverPingCmd() *cobra.Command {
+	var url string
+	var port string
+	var route string
+	var timeout time.Duration
+	var serverPingCmd = &cobra.Command{
+		Use:   "ping",
+		Short: "Check a health check route endpoint",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client := http.Client{
+				Timeout: timeout,
+			}
+			resp, err := client.Get(fmt.Sprintf("%s:%s%s", url, port, route))
+			if err != nil {
+				return fmt.Errorf("server response error: %w", err)
+			}
+			defer func() {
+				if err := resp.Body.Close(); err != nil {
+					fmt.Println("server: can't close request body: ", err.Error())
+				}
+			}()
+
+			if resp.StatusCode != http.StatusOK {
+				responseBody, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					return fmt.Errorf("server: can't get response body %w", err)
+				}
+				return fmt.Errorf("server response is not expected: body %q, wrong status code %d", responseBody, resp.StatusCode)
+			}
+			return nil
+		},
+	}
+	serverPingCmd.Flags().StringVarP(&port, "port", "p", "8880", "port to connect. Address shouldn't have port. Default: '8880")
+	serverPingCmd.Flags().StringVarP(&route, "route", "r", "/ping", "health check route. Default: '/ping'")
+	serverPingCmd.Flags().StringVarP(&url, "url", "u", "http://localhost", "url for server checking. Url shouldn't contain port. Default: 'http://localhost'")
+	serverPingCmd.Flags().DurationVarP(&timeout, "timeout", "t", 15*time.Second, "max request time to make a request. Default: '15 seconds'")
+	return serverPingCmd
 }

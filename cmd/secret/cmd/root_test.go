@@ -367,15 +367,15 @@ func TestRoot_ServerPing(t *testing.T) {
 		require.EqualValues(t, "server response is not expected: body \"test request body\", wrong status code 404", err.Error())
 	})
 	t.Run("error when server connection refused", func(t *testing.T) {
-		testUrl := "http://localhost"
+		testURL := "http://localhost"
 		port := "8880"
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		r := New()
-		r.cmd.SetArgs([]string{"server", "ping", "--url", testUrl, "--port", port, "--route", route})
+		r.cmd.SetArgs([]string{"server", "ping", "--url", testURL, "--port", port, "--route", route})
 		err := r.Execute(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("server response error: Get %q:", fmt.Sprintf("%s:%s%s", testUrl, port, route)))
+		require.Contains(t, err.Error(), fmt.Sprintf("server response error: Get %q:", fmt.Sprintf("%s:%s%s", testURL, port, route)))
 		require.Contains(t, err.Error(), fmt.Sprintf("%s: connect: connection refused", port))
 	})
 	t.Run("error when request time to make a request is over", func(t *testing.T) {

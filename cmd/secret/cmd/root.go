@@ -219,23 +219,23 @@ func (r *root) serverPingCmd() *cobra.Command {
 			}
 			defer func() {
 				if err := resp.Body.Close(); err != nil {
-					fmt.Println("server: cannot close request body: ", err.Error())
+					fmt.Println("server: can't close request body: ", err.Error())
 				}
 			}()
 
 			if resp.StatusCode != http.StatusOK {
 				responseBody, err := ioutil.ReadAll(resp.Body)
 				if err != nil {
-					return fmt.Errorf("secret client: can't get response body %w", err)
+					return fmt.Errorf("server: can't get response body %w", err)
 				}
 				return fmt.Errorf("server response is not expected: body %q, wrong status code %d", responseBody, resp.StatusCode)
 			}
 			return nil
 		},
 	}
-	serverPingCmd.Flags().StringVarP(&port, "port", "p", "8880", "remote or local url port")
-	serverPingCmd.Flags().StringVarP(&route, "route", "r", "/ping", "remote or local url route")
-	serverPingCmd.Flags().StringVarP(&url, "url", "u", "http://localhost", "remote or local url for server checking")
-	serverPingCmd.Flags().DurationVarP(&timeout, "timeout", "t", 15*time.Second, "max request time to url")
+	serverPingCmd.Flags().StringVarP(&port, "port", "p", "8880", "port to connect. Default: '8880")
+	serverPingCmd.Flags().StringVarP(&route, "route", "r", "/ping", "url route. Default: '/ping'")
+	serverPingCmd.Flags().StringVarP(&url, "url", "u", "http://localhost", "url for server checking. Default: 'http://localhost'")
+	serverPingCmd.Flags().DurationVarP(&timeout, "timeout", "t", 15*time.Second, "max request time to make a request. Default: '15 seconds'")
 	return serverPingCmd
 }

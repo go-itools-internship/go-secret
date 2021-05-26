@@ -4,6 +4,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
@@ -68,6 +69,7 @@ func New(opts ...RootOptions) *root {
 	secret.AddCommand(rootData.setCmd())
 	secret.AddCommand(rootData.getCmd())
 	secret.AddCommand(rootData.serverCmd())
+	secret.SilenceUsage = true // write false if you want to see options when an error occurs
 
 	return rootData
 }
@@ -169,13 +171,13 @@ func (r *root) serverCmd() *cobra.Command {
 					fmt.Println("connection error: %w", err)
 				}
 			}()
-			fmt.Println("Server started")
+			fmt.Println("server started")
 
 			select {
 			case <-done:
-				fmt.Println("Server stopped")
+				fmt.Println("server stopped")
 			case <-cmd.Context().Done():
-				fmt.Println("Server stopped with context")
+				fmt.Println("server stopped with context")
 			}
 
 			go func(ctx context.Context) {
@@ -184,11 +186,11 @@ func (r *root) serverCmd() *cobra.Command {
 				defer cancel()
 				err = srv.Shutdown(ctx)
 				if err != nil {
-					fmt.Println("Server Shutdown Failed", err)
+					fmt.Println("server Shutdown Failed", err)
 				}
 			}(context.Background())
 			<-shutdownCh
-			fmt.Println("Server exit")
+			fmt.Println("server exit")
 
 			return nil
 		},
@@ -198,26 +200,42 @@ func (r *root) serverCmd() *cobra.Command {
 	serverCmd.AddCommand(r.serverPingCmd())
 	return serverCmd
 }
+
 func (r *root) serverPingCmd() *cobra.Command {
 	var url string
 	var port string
 	var route string
+	var timeout time.Duration
 	var serverPingCmd = &cobra.Command{
 		Use:   "ping",
-		Short: "Run server runner mode to start the app as a daemon",
+		Short: "Check a health check route endpoint",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			resp, err := http.Get(url + ":" + port + route)
-			if err != nil {
-				return err
+			client := http.Client{
+				Timeout: timeout,
 			}
+			resp, err := client.Get(fmt.Sprintf("%s:%s%s", url, port, route))
+			if err != nil {
+				return fmt.Errorf("server response error: %w", err)
+			}
+			defer func() {
+				if err := resp.Body.Close(); err != nil {
+					fmt.Println("server: cannot close request body: ", err.Error())
+				}
+			}()
+
 			if resp.StatusCode != http.StatusOK {
-				return fmt.Errorf("server response not expected: wrong status code %d", resp.StatusCode)
+				responseBody, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					return fmt.Errorf("secret client: can't get response body %w", err)
+				}
+				return fmt.Errorf("server response is not expected: body %q, wrong status code %d", responseBody, resp.StatusCode)
 			}
 			return nil
 		},
 	}
-	serverPingCmd.Flags().StringVarP(&port, "port", "t", "8880", "localhost port")
-	serverPingCmd.Flags().StringVarP(&route, "route", "r", "/ping", "localhost route")
-	serverPingCmd.Flags().StringVarP(&url, "url", "u", "http://localhost", "localhost address")
+	serverPingCmd.Flags().StringVarP(&port, "port", "p", "8880", "remote or local url port")
+	serverPingCmd.Flags().StringVarP(&route, "route", "r", "/ping", "remote or local url route")
+	serverPingCmd.Flags().StringVarP(&url, "url", "u", "http://localhost", "remote or local url for server checking")
+	serverPingCmd.Flags().DurationVarP(&timeout, "timeout", "t", 15*time.Second, "max request time to url")
 	return serverPingCmd
 }

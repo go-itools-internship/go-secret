@@ -340,12 +340,12 @@ func TestRoot_ServerPing(t *testing.T) {
 		defer s.Close()
 
 		// Parse server url for wright flags format
-		sUrl, h, p := ParseUrl(s.URL)
+		sURL, h, p := ParseURL(s.URL)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		r := New()
-		r.cmd.SetArgs([]string{"server", "ping", "--url", fmt.Sprintf("%s://%s", sUrl.Scheme, h), "--port", p, "--route", route})
+		r.cmd.SetArgs([]string{"server", "ping", "--url", fmt.Sprintf("%s://%s", sURL.Scheme, h), "--port", p, "--route", route})
 		require.NoError(t, r.Execute(ctx))
 	})
 	t.Run("error when response status is not found", func(t *testing.T) {
@@ -356,12 +356,12 @@ func TestRoot_ServerPing(t *testing.T) {
 		}))
 		defer s.Close()
 		// Parse server url for wright flags format
-		sUrl, h, p := ParseUrl(s.URL)
+		sURL, h, p := ParseURL(s.URL)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		r := New()
-		r.cmd.SetArgs([]string{"server", "ping", "--url", fmt.Sprintf("%s://%s", sUrl.Scheme, h), "--port", p, "--route", route})
+		r.cmd.SetArgs([]string{"server", "ping", "--url", fmt.Sprintf("%s://%s", sURL.Scheme, h), "--port", p, "--route", route})
 		err := r.Execute(ctx)
 		require.Error(t, err)
 		require.EqualValues(t, "server response is not expected: body \"test request body\", wrong status code 404", err.Error())
@@ -386,28 +386,28 @@ func TestRoot_ServerPing(t *testing.T) {
 		}))
 		defer s.Close()
 		// Parse server url for wright flags format
-		sUrl, h, p := ParseUrl(s.URL)
+		sURL, h, p := ParseURL(s.URL)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		r := New()
-		r.cmd.SetArgs([]string{"server", "ping", "--url", fmt.Sprintf("%s://%s", sUrl.Scheme, h), "--port", p, "--route", route, "--timeout", "2s"})
+		r.cmd.SetArgs([]string{"server", "ping", "--url", fmt.Sprintf("%s://%s", sURL.Scheme, h), "--port", p, "--route", route, "--timeout", "2s"})
 		err := r.Execute(ctx)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "Client.Timeout exceeded while awaiting headers")
 	})
 }
 
-func ParseUrl(s string) (*url.URL, string, string) {
-	serverUrl, err := url.Parse(s)
+func ParseURL(s string) (*url.URL, string, string) {
+	serverURL, err := url.Parse(s)
 	if err != nil {
 		fmt.Println(err)
 	}
-	h, p, err := net.SplitHostPort(serverUrl.Host)
+	h, p, err := net.SplitHostPort(serverURL.Host)
 	if err != nil {
 		fmt.Println(err)
 	}
-	return serverUrl, h, p
+	return serverURL, h, p
 }
 
 func createAndExecuteCliCommand(ctx context.Context) (freePort string) {

@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/zap"
+
 	api "github.com/go-itools-internship/go-secret/pkg/http"
 
 	"github.com/stretchr/testify/require"
@@ -38,7 +40,7 @@ func TestClient_SetByKey(t *testing.T) {
 		}))
 		defer s.Close()
 
-		c := New(s.URL)
+		c := New(s.URL, createSugarLogger())
 		require.EqualValues(t, s.URL, c.url)
 		err := c.SetByKey(ctx, getter, value, method, cipherKey)
 		require.NoError(t, err)
@@ -53,7 +55,7 @@ func TestClient_SetByKey(t *testing.T) {
 		}))
 		defer s.Close()
 
-		c := New(s.URL)
+		c := New(s.URL, createSugarLogger())
 		err := c.SetByKey(ctx, getter, value, method, cipherKey)
 		require.Error(t, err)
 	})
@@ -64,7 +66,7 @@ func TestClient_SetByKey(t *testing.T) {
 		}))
 		defer s.Close()
 		wrongURL := "http://127.0.0.1:8888"
-		c := New(wrongURL)
+		c := New(wrongURL, createSugarLogger())
 		require.NotEqual(t, s.URL, wrongURL)
 		err := c.SetByKey(ctx, getter, value, method, cipherKey)
 		require.Error(t, err)
@@ -79,7 +81,7 @@ func TestClient_SetByKey(t *testing.T) {
 		}))
 		defer s.Close()
 
-		c := New(s.URL)
+		c := New(s.URL, createSugarLogger())
 		err := c.SetByKey(ctx, getter, value, method, cipherKey)
 		require.Error(t, err)
 		require.EqualValues(t, "secret client: can't set data: body: \"test bad request body\", status code: 400", err.Error())
@@ -105,7 +107,7 @@ func TestClient_GetByKey(t *testing.T) {
 		}))
 		defer s.Close()
 
-		c := New(s.URL)
+		c := New(s.URL, createSugarLogger())
 		require.EqualValues(t, s.URL, c.url)
 		data, err := c.GetByKey(ctx, getter, method, cipherKey)
 		require.NoError(t, err)
@@ -121,7 +123,7 @@ func TestClient_GetByKey(t *testing.T) {
 		defer s.Close()
 
 		wrongURL := "http://127.0.0.1:8888"
-		c := New(wrongURL)
+		c := New(wrongURL, createSugarLogger())
 		require.NotEqual(t, s.URL, wrongURL)
 		data, err := c.GetByKey(ctx, getter, method, cipherKey)
 		require.Error(t, err)
@@ -134,7 +136,7 @@ func TestClient_GetByKey(t *testing.T) {
 		}))
 		defer s.Close()
 
-		c := New(s.URL)
+		c := New(s.URL, createSugarLogger())
 		data, err := c.GetByKey(ctx, getter, method, cipherKey)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "cannot decode body")
@@ -149,9 +151,15 @@ func TestClient_GetByKey(t *testing.T) {
 		}))
 		defer s.Close()
 
-		c := New(s.URL)
+		c := New(s.URL, createSugarLogger())
 		_, err := c.GetByKey(ctx, getter, method, cipherKey)
 		require.Error(t, err)
 		require.EqualValues(t, "secret client: can't get data: body: \"test bad request body\", status code: 400", err.Error())
 	})
+}
+
+func createSugarLogger() *zap.SugaredLogger {
+	logger, _ := zap.NewProduction()
+	sugar := logger.Sugar()
+	return sugar
 }

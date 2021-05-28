@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -277,7 +276,7 @@ func TestHTTPHandlers(t *testing.T) {
 func createSugarLogger() *zap.SugaredLogger {
 	logger, err := zap.NewProduction()
 	if err != nil {
-		log.Fatalf("can't initialize zap logger: %v", err)
+		panic(fmt.Errorf("can't initialize zap logger: %w", err))
 	}
 	sugar := logger.Sugar()
 	return sugar

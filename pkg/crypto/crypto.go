@@ -21,14 +21,13 @@ type cryptographer struct {
 	logger     *zap.SugaredLogger
 }
 
-func NewCryptographer(key []byte, logger *zap.SugaredLogger) *cryptographer {
+func NewCryptographer(key []byte) *cryptographer {
 	h := sha256.New()
 	key32 := make([]byte, 32)
 	copy(key32, h.Sum(key))
 	return &cryptographer{
 		key:        key32,
 		randomFlag: true,
-		logger:     logger,
 	}
 }
 

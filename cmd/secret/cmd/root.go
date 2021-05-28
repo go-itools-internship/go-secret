@@ -35,7 +35,7 @@ type chiLogger struct {
 }
 
 func (c *chiLogger) Print(v ...interface{}) {
-	c.sugar.Info(v)
+	c.sugar.Info(v...)
 }
 
 type options struct {
@@ -63,7 +63,6 @@ func (r *root) Execute(ctx context.Context) error {
 // New function create commands to the cobra CLI
 // RootOptions adds additional features to the cobra CLI
 func New(opts ...RootOptions) *root {
-	var logFile string
 	options := defaultOptions
 	for _, opt := range opts {
 		opt(&options)
@@ -74,14 +73,13 @@ func New(opts ...RootOptions) *root {
 		Long:    "Create CLI to set and get secrets via the command line",
 		Version: options.version,
 	}
-	path := []string{"secret.log"}
 
 	cfg := zap.NewDevelopmentConfig()
-	cfg.OutputPaths = path
-	cfg.ErrorOutputPaths = path
+	cfg.DisableCaller = true
+
 	logg, err := cfg.Build()
 	if err != nil {
-		return nil
+		panic(fmt.Errorf("logger can't initilize %s", err))
 	}
 
 	rootData := &root{cmd: secret, options: options, logger: logg.Sugar()}
@@ -91,7 +89,6 @@ func New(opts ...RootOptions) *root {
 	secret.AddCommand(rootData.serverCmd())
 	secret.SilenceUsage = true // write false if you want to see options when an error occurs
 
-	secret.Flags().StringVarP(&logFile, "log-file", "l", "go-secret/cmd/secret/cmd", "path to log file")
 	return rootData
 }
 
@@ -106,8 +103,8 @@ func (r *root) setCmd() *cobra.Command {
 		Short: "Saves data to the specified path in encrypted form",
 		Long:  "it takes keys and a value and path from user and saves value in encrypted manner in specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var cr = crypto.NewCryptographer([]byte(cipherKey), r.logger)
-			ds, err := storage.NewFileVault(path, r.logger)
+			var cr = crypto.NewCryptographer([]byte(cipherKey))
+			ds, err := storage.NewFileVault(path)
 			if err != nil {
 				return fmt.Errorf("can't create storage by path: %w", err)
 			}
@@ -136,8 +133,9 @@ func (r *root) getCmd() *cobra.Command {
 		Short: "Get data from specified path in decrypted form",
 		Long:  "it takes keys and path from user and get value in decrypted manner from specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var cr = crypto.NewCryptographer([]byte(cipherKey), r.logger)
-			ds, err := storage.NewFileVault(path, r.logger)
+			logger := r.logger.Named("get-cmd")
+			var cr = crypto.NewCryptographer([]byte(cipherKey))
+			ds, err := storage.NewFileVault(path)
 			if err != nil {
 				return fmt.Errorf("can't get storage by path: %w", err)
 			}
@@ -146,7 +144,7 @@ func (r *root) getCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("can't get data by key: %w", err)
 			}
-			r.logger.Info(string(data))
+			logger.Info(string(data))
 			return nil
 		},
 	}
@@ -164,22 +162,23 @@ func (r *root) serverCmd() *cobra.Command {
 		Use:   "server",
 		Short: "Run server runner mode to start the app as a daemon",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := storage.NewFileVault(path, r.logger)
+			logger := r.logger.Named("server")
+			ds, err := storage.NewFileVault(path)
 			if err != nil {
 				return fmt.Errorf("can't get storage by path: %w", err)
 			}
 			store := make(map[string]api.MethodFactoryFunc)
 			store["local"] = func(cipher string) (secretApi.Provider, func()) {
-				cr := crypto.NewCryptographer([]byte(cipher), r.logger)
+				cr := crypto.NewCryptographer([]byte(cipher))
 				return provider.NewProvider(cr, ds), nil
 			}
 
-			handler := api.NewMethods(store, r.logger)
+			handler := api.NewMethods(store, logger.Named("handler"))
 			router := chi.NewRouter()
 			srv := &http.Server{Addr: ":" + port, Handler: router}
 
 			router.Use(middleware.Heartbeat("/ping"), middleware.RequestLogger(&middleware.DefaultLogFormatter{
-				Logger: &chiLogger{r.logger},
+				Logger: &chiLogger{logger.Named("api")},
 			}))
 			router.Get("/", handler.GetByKey)
 			router.Post("/", handler.SetByKey)
@@ -191,16 +190,16 @@ func (r *root) serverCmd() *cobra.Command {
 			go func() {
 				err := srv.ListenAndServe()
 				if err != nil {
-					r.logger.Errorf("connection error: %s", err)
+					logger.Errorf("connection error: %s", err)
 				}
 			}()
-			r.logger.Info("server started")
+			logger.Info("listener started")
 
 			select {
 			case <-done:
-				r.logger.Info("server stopped")
+				logger.Info("listener stopped")
 			case <-cmd.Context().Done():
-				r.logger.Info("server stopped with context")
+				logger.Info("listener stopped with context")
 			}
 
 			go func(ctx context.Context) {
@@ -209,11 +208,11 @@ func (r *root) serverCmd() *cobra.Command {
 				defer cancel()
 				err = srv.Shutdown(ctx)
 				if err != nil {
-					r.logger.Error("server Shutdown Failed", err)
+					logger.Error("listener shutdown failed", err)
 				}
 			}(context.Background())
 			<-shutdownCh
-			r.logger.Info("server exit")
+			logger.Info("exit")
 
 			return nil
 		},

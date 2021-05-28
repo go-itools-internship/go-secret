@@ -10,17 +10,14 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-
-	"go.uber.org/zap"
 )
 
 type fileVault struct {
 	storage map[string][]byte
 	path    string
-	logger  *zap.SugaredLogger
 }
 
-func NewFileVault(path string, logger *zap.SugaredLogger) (*fileVault, error) {
+func NewFileVault(path string) (*fileVault, error) {
 	storage := make(map[string][]byte)
 
 	f, err := os.Open(filepath.Clean(path))
@@ -47,7 +44,7 @@ func NewFileVault(path string, logger *zap.SugaredLogger) (*fileVault, error) {
 		}
 	}
 
-	return &fileVault{storage: storage, path: path, logger: logger}, nil
+	return &fileVault{storage: storage, path: path}, nil
 }
 
 func (f *fileVault) SaveData(key, encodedValue []byte) error {

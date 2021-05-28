@@ -91,6 +91,7 @@ func (a *methods) GetByKey(w http.ResponseWriter, r *http.Request) {
 //        "value": "123-456"
 //    }
 func (a *methods) SetByKey(w http.ResponseWriter, r *http.Request) {
+	logger := a.logger.Named("set-by-key")
 	var requestBody struct {
 		GetterKey  string `json:"getter"`
 		MethodType string `json:"method"`
@@ -102,7 +103,7 @@ func (a *methods) SetByKey(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() {
 		if err := r.Body.Close(); err != nil {
-			a.logger.Info("cannot close request body: ", err.Error())
+			logger.Warnf("cannot close request body: %s", err.Error())
 		}
 	}()
 
@@ -131,10 +132,11 @@ func (a *methods) SetByKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *methods) writeErrorResponse(w http.ResponseWriter, status int, response error) {
+	logger := a.logger.Named("write-error-response")
 	w.WriteHeader(status)
 	if response != nil {
 		if _, err := fmt.Fprintf(w, `{"error":"%s"}`, response.Error()); err != nil {
-			a.logger.Info("cannot write response body: ", err.Error())
+			logger.Warnf("cannot write response body: %s", err.Error())
 		}
 	}
 }

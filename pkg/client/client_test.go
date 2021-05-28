@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -162,7 +162,7 @@ func TestClient_GetByKey(t *testing.T) {
 func createSugarLogger() *zap.SugaredLogger {
 	logger, err := zap.NewProduction()
 	if err != nil {
-		log.Fatalf("can't initialize zap logger: %v", err)
+		panic(fmt.Errorf("can't initialize zap logger: %w", err))
 	}
 	sugar := logger.Sugar()
 	return sugar

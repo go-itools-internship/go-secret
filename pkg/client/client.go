@@ -56,6 +56,7 @@ func New(url string, logger *zap.SugaredLogger, opts ...Option) *client {
 // 	Cipher key for data encryption and decryption.
 // 	Method to choose different providers.
 func (c *client) GetByKey(ctx context.Context, key, method, cipherKey string) (string, error) {
+	logger := c.logger.Named("get-by-key")
 	var responseBody struct {
 		Value string `json:"value"`
 	}
@@ -76,7 +77,7 @@ func (c *client) GetByKey(ctx context.Context, key, method, cipherKey string) (s
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			c.logger.Info("secret client: cannot close request body: ", err.Error())
+			logger.Warnf("secret client: cannot close request body: %s", err.Error())
 		}
 	}()
 	if resp.StatusCode != http.StatusOK {
@@ -98,6 +99,7 @@ func (c *client) GetByKey(ctx context.Context, key, method, cipherKey string) (s
 // 	Cipher key to set data encryption.
 // 	Method to choose different providers.
 func (c *client) SetByKey(ctx context.Context, getterKey, value, method, cipherKey string) error {
+	logger := c.logger.Named("set-by-key")
 	postBody, err := json.Marshal(map[string]string{
 		"getter": getterKey,
 		"method": method,
@@ -119,7 +121,7 @@ func (c *client) SetByKey(ctx context.Context, getterKey, value, method, cipherK
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			fmt.Println("secret client: cannot close request body: ", err.Error())
+			logger.Warnf("secret client: cannot close request body: %s", err.Error())
 		}
 	}()
 	if resp.StatusCode != http.StatusNoContent {

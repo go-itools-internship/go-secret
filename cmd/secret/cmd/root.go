@@ -104,7 +104,7 @@ func (r *root) setCmd() *cobra.Command {
 		Short: "Saves data to the specified path in encrypted form",
 		Long:  "it takes keys and a value and path from user and saves value in encrypted manner in specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var cr = crypto.NewCryptographer([]byte(cipherKey))
+			var cr = crypto.NewCryptographer([]byte(cipherKey), r.logger)
 			ds, err := storage.NewFileVault(path)
 			if err != nil {
 				return fmt.Errorf("can't create storage by path: %w", err)
@@ -134,7 +134,7 @@ func (r *root) getCmd() *cobra.Command {
 		Short: "Get data from specified path in decrypted form",
 		Long:  "it takes keys and path from user and get value in decrypted manner from specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var cr = crypto.NewCryptographer([]byte(cipherKey))
+			var cr = crypto.NewCryptographer([]byte(cipherKey), r.logger)
 			ds, err := storage.NewFileVault(path)
 			if err != nil {
 				return fmt.Errorf("can't get storage by path: %w", err)
@@ -168,11 +168,11 @@ func (r *root) serverCmd() *cobra.Command {
 			}
 			store := make(map[string]api.MethodFactoryFunc)
 			store["local"] = func(cipher string) (secretApi.Provider, func()) {
-				cr := crypto.NewCryptographer([]byte(cipher))
+				cr := crypto.NewCryptographer([]byte(cipher), r.logger)
 				return provider.NewProvider(cr, ds), nil
 			}
 
-			handler := api.NewMethods(store)
+			handler := api.NewMethods(store, nil)
 			router := chi.NewRouter()
 			srv := &http.Server{Addr: ":" + port, Handler: router}
 

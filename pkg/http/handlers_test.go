@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/go-itools-internship/go-secret/pkg/secret"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +35,7 @@ func TestHTTPHandlers(t *testing.T) {
 						atomic.AddInt64(&tearDownFnCounter, -1)
 					}
 				},
-			})
+			}, createSugarLogger())
 
 			s := httptest.NewServer(http.HandlerFunc(a.SetByKey))
 			defer s.Close()
@@ -60,7 +62,7 @@ func TestHTTPHandlers(t *testing.T) {
 						t.Errorf("tear down should not be invoked")
 					}
 				},
-			})
+			}, createSugarLogger())
 
 			s := httptest.NewServer(http.HandlerFunc(a.SetByKey))
 			defer s.Close()
@@ -91,7 +93,7 @@ func TestHTTPHandlers(t *testing.T) {
 					require.EqualValues(t, expectedSipherKey, cipher)
 					return mockProvider, nil
 				},
-			})
+			}, createSugarLogger())
 
 			s := httptest.NewServer(http.HandlerFunc(a.SetByKey))
 			defer s.Close()
@@ -114,7 +116,7 @@ func TestHTTPHandlers(t *testing.T) {
 			mockProvider := new(MockProvider)
 			defer mockProvider.AssertExpectations(t)
 
-			a := NewMethods(map[string]MethodFactoryFunc{})
+			a := NewMethods(map[string]MethodFactoryFunc{}, createSugarLogger())
 
 			s := httptest.NewServer(http.HandlerFunc(a.SetByKey))
 			defer s.Close()
@@ -149,7 +151,7 @@ func TestHTTPHandlers(t *testing.T) {
 						atomic.AddInt64(&tearDownFnCounter, -1)
 					}
 				},
-			})
+			}, createSugarLogger())
 
 			s := httptest.NewServer(http.HandlerFunc(a.GetByKey))
 			defer s.Close()
@@ -179,7 +181,7 @@ func TestHTTPHandlers(t *testing.T) {
 			mockProvider := new(MockProvider)
 			defer mockProvider.AssertExpectations(t)
 
-			a := NewMethods(map[string]MethodFactoryFunc{})
+			a := NewMethods(map[string]MethodFactoryFunc{}, createSugarLogger())
 
 			s := httptest.NewServer(http.HandlerFunc(a.GetByKey))
 			defer s.Close()
@@ -210,7 +212,7 @@ func TestHTTPHandlers(t *testing.T) {
 						atomic.AddInt64(&tearDownFnCounter, -1)
 					}
 				},
-			})
+			}, createSugarLogger())
 
 			s := httptest.NewServer(http.HandlerFunc(a.GetByKey))
 			defer s.Close()
@@ -247,7 +249,7 @@ func TestHTTPHandlers(t *testing.T) {
 					require.EqualValues(t, expectedSipherKey, cipher)
 					return mockProvider, nil
 				},
-			})
+			}, createSugarLogger())
 
 			s := httptest.NewServer(http.HandlerFunc(a.GetByKey))
 			defer s.Close()
@@ -269,4 +271,13 @@ func TestHTTPHandlers(t *testing.T) {
 			require.Contains(t, string(respBody), `{"error":"cannot get data by key:`)
 		})
 	})
+}
+
+func createSugarLogger() *zap.SugaredLogger {
+	logger, err := zap.NewProduction()
+	if err != nil {
+		panic(fmt.Errorf("can't initialize zap logger: %w", err))
+	}
+	sugar := logger.Sugar()
+	return sugar
 }

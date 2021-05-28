@@ -21,11 +21,21 @@ import (
 	"github.com/go-itools-internship/go-secret/pkg/io/storage"
 	"github.com/go-itools-internship/go-secret/pkg/provider"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 type root struct {
 	options options
 	cmd     *cobra.Command
+	logger  *zap.SugaredLogger
+}
+
+type chiLogger struct {
+	sugar *zap.SugaredLogger
+}
+
+func (c *chiLogger) Print(v ...interface{}) {
+	c.sugar.Info(v...)
 }
 
 type options struct {
@@ -64,7 +74,15 @@ func New(opts ...RootOptions) *root {
 		Version: options.version,
 	}
 
-	rootData := &root{cmd: secret, options: options}
+	cfg := zap.NewDevelopmentConfig()
+	cfg.DisableCaller = true
+
+	logg, err := cfg.Build()
+	if err != nil {
+		panic(fmt.Errorf("logger can't initilize %s", err))
+	}
+
+	rootData := &root{cmd: secret, options: options, logger: logg.Sugar()}
 
 	secret.AddCommand(rootData.setCmd())
 	secret.AddCommand(rootData.getCmd())
@@ -115,6 +133,7 @@ func (r *root) getCmd() *cobra.Command {
 		Short: "Get data from specified path in decrypted form",
 		Long:  "it takes keys and path from user and get value in decrypted manner from specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logger := r.logger.Named("get-cmd")
 			var cr = crypto.NewCryptographer([]byte(cipherKey))
 			ds, err := storage.NewFileVault(path)
 			if err != nil {
@@ -125,7 +144,7 @@ func (r *root) getCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("can't get data by key: %w", err)
 			}
-			fmt.Println(string(data))
+			logger.Info(string(data))
 			return nil
 		},
 	}
@@ -143,6 +162,7 @@ func (r *root) serverCmd() *cobra.Command {
 		Use:   "server",
 		Short: "Run server runner mode to start the app as a daemon",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logger := r.logger.Named("server")
 			ds, err := storage.NewFileVault(path)
 			if err != nil {
 				return fmt.Errorf("can't get storage by path: %w", err)
@@ -153,11 +173,13 @@ func (r *root) serverCmd() *cobra.Command {
 				return provider.NewProvider(cr, ds), nil
 			}
 
-			handler := api.NewMethods(store)
+			handler := api.NewMethods(store, logger.Named("handler"))
 			router := chi.NewRouter()
 			srv := &http.Server{Addr: ":" + port, Handler: router}
 
-			router.Use(middleware.Heartbeat("/ping"))
+			router.Use(middleware.Heartbeat("/ping"), middleware.RequestLogger(&middleware.DefaultLogFormatter{
+				Logger: &chiLogger{logger.Named("api")},
+			}))
 			router.Get("/", handler.GetByKey)
 			router.Post("/", handler.SetByKey)
 
@@ -168,16 +190,16 @@ func (r *root) serverCmd() *cobra.Command {
 			go func() {
 				err := srv.ListenAndServe()
 				if err != nil {
-					fmt.Println("connection error: %w", err)
+					logger.Errorf("connection error: %s", err)
 				}
 			}()
-			fmt.Println("server started")
+			logger.Info("listener started")
 
 			select {
 			case <-done:
-				fmt.Println("server stopped")
+				logger.Info("listener stopped")
 			case <-cmd.Context().Done():
-				fmt.Println("server stopped with context")
+				logger.Info("listener stopped with context")
 			}
 
 			go func(ctx context.Context) {
@@ -186,11 +208,11 @@ func (r *root) serverCmd() *cobra.Command {
 				defer cancel()
 				err = srv.Shutdown(ctx)
 				if err != nil {
-					fmt.Println("server Shutdown Failed", err)
+					logger.Error("listener shutdown failed", err)
 				}
 			}(context.Background())
 			<-shutdownCh
-			fmt.Println("server exit")
+			logger.Info("exit")
 
 			return nil
 		},

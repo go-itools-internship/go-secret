@@ -7,8 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
+
+	"go.uber.org/zap"
 
 	"github.com/go-itools-internship/go-secret/pkg/secret"
 )
@@ -26,16 +27,18 @@ const (
 type MethodFactoryFunc func(cipher string) (secret.Provider, func())
 
 type methods struct {
-	ss map[string]MethodFactoryFunc
+	ss     map[string]MethodFactoryFunc
+	logger *zap.SugaredLogger
 }
 
 // NewMethods initializes a structure that provides HTTP handler functions
 // to organize REST API access to different type of provides based on "method" type.
 //
 // Accepts `ss` map with a set of method-provider pair.
-func NewMethods(ss map[string]MethodFactoryFunc) *methods {
+func NewMethods(ss map[string]MethodFactoryFunc, logger *zap.SugaredLogger) *methods {
 	return &methods{
-		ss: ss,
+		ss:     ss,
+		logger: logger,
 	}
 }
 
@@ -88,6 +91,7 @@ func (a *methods) GetByKey(w http.ResponseWriter, r *http.Request) {
 //        "value": "123-456"
 //    }
 func (a *methods) SetByKey(w http.ResponseWriter, r *http.Request) {
+	logger := a.logger.Named("set-by-key")
 	var requestBody struct {
 		GetterKey  string `json:"getter"`
 		MethodType string `json:"method"`
@@ -99,7 +103,7 @@ func (a *methods) SetByKey(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() {
 		if err := r.Body.Close(); err != nil {
-			log.Println("cannot close request body: ", err.Error())
+			logger.Warnf("cannot close request body: %s", err.Error())
 		}
 	}()
 
@@ -128,10 +132,11 @@ func (a *methods) SetByKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *methods) writeErrorResponse(w http.ResponseWriter, status int, response error) {
+	logger := a.logger.Named("write-error-response")
 	w.WriteHeader(status)
 	if response != nil {
 		if _, err := fmt.Fprintf(w, `{"error":"%s"}`, response.Error()); err != nil {
-			log.Println("cannot write response body: ", err.Error())
+			logger.Warnf("cannot write response body: %s", err.Error())
 		}
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -31,11 +30,12 @@ type root struct {
 	logger  *zap.SugaredLogger
 }
 
-//TODO
 type chiLogger struct {
+	sugar *zap.SugaredLogger
 }
 
 func (c *chiLogger) Print(v ...interface{}) {
+	c.sugar.Info(v)
 }
 
 type options struct {
@@ -74,22 +74,24 @@ func New(opts ...RootOptions) *root {
 		Long:    "Create CLI to set and get secrets via the command line",
 		Version: options.version,
 	}
-	//file, err := os.OpenFile("log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	//path := []string{"go-secret"}
-	//loggerPath := zap.Config{OutputPaths: path}
-	logger, err := zap.NewDevelopment()
+	path := []string{"secret.log"}
+
+	cfg := zap.NewDevelopmentConfig()
+	cfg.OutputPaths = path
+	cfg.ErrorOutputPaths = path
+	logg, err := cfg.Build()
 	if err != nil {
-		log.Fatalf("can't initialize zap logger: %v", err)
+		return nil
 	}
 
-	rootData := &root{cmd: secret, options: options, logger: logger.Sugar()}
+	rootData := &root{cmd: secret, options: options, logger: logg.Sugar()}
 
 	secret.AddCommand(rootData.setCmd())
 	secret.AddCommand(rootData.getCmd())
 	secret.AddCommand(rootData.serverCmd())
 	secret.SilenceUsage = true // write false if you want to see options when an error occurs
 
-	secret.Flags().StringVarP(&logFile, "log-file", "l", "go-secret", "path to log file")
+	secret.Flags().StringVarP(&logFile, "log-file", "l", "go-secret/cmd/secret/cmd", "path to log file")
 	return rootData
 }
 
@@ -177,7 +179,7 @@ func (r *root) serverCmd() *cobra.Command {
 			srv := &http.Server{Addr: ":" + port, Handler: router}
 
 			router.Use(middleware.Heartbeat("/ping"), middleware.RequestLogger(&middleware.DefaultLogFormatter{
-				Logger: &chiLogger{},
+				Logger: &chiLogger{r.logger},
 			}))
 			router.Get("/", handler.GetByKey)
 			router.Post("/", handler.SetByKey)

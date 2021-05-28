@@ -11,14 +11,11 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-
-	"go.uber.org/zap"
 )
 
 type cryptographer struct {
 	key        []byte
 	randomFlag bool
-	logger     *zap.SugaredLogger
 }
 
 func NewCryptographer(key []byte) *cryptographer {

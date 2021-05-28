@@ -2,7 +2,10 @@ package provider
 
 import (
 	"fmt"
+	"log"
 	"testing"
+
+	"go.uber.org/zap"
 
 	"github.com/stretchr/testify/assert"
 	_ "github.com/stretchr/testify/mock"
@@ -10,6 +13,7 @@ import (
 )
 
 func TestProvider_SetData(t *testing.T) {
+	sugar := createSugarLogger()
 	t.Run("success", func(t *testing.T) {
 		key := []byte{1, 1, 1}
 		value := []byte{0, 1, 3}
@@ -20,7 +24,7 @@ func TestProvider_SetData(t *testing.T) {
 		mockCr.On("Encode", value).Return(encodedValue, nil)
 		mockDs.On("SaveData", key, encodedValue).Return(nil)
 
-		p := NewProvider(mockCr, mockDs)
+		p := NewProvider(mockCr, mockDs, sugar)
 		err := p.SetData(key, value)
 		require.NoError(t, err)
 
@@ -37,7 +41,7 @@ func TestProvider_SetData(t *testing.T) {
 
 		mockCr.On("Encode", value).Return(encodedValue, fmt.Errorf("test"))
 
-		p := NewProvider(mockCr, mockDs)
+		p := NewProvider(mockCr, mockDs, sugar)
 		err := p.SetData(key, value)
 		require.Error(t, err, "error assert failed")
 		require.EqualValues(t, "provider, SetData method: encode error: test", err.Error())
@@ -55,7 +59,7 @@ func TestProvider_SetData(t *testing.T) {
 		mockCr.On("Encode", value).Return(encodedValue, nil)
 		mockDs.On("SaveData", key, encodedValue).Return(fmt.Errorf("test"))
 
-		p := NewProvider(mockCr, mockDs)
+		p := NewProvider(mockCr, mockDs, sugar)
 		err := p.SetData(key, value)
 		require.Error(t, err, "error assert failed")
 		require.EqualValues(t, "provider, SetData method: save error: test", err.Error())
@@ -65,6 +69,7 @@ func TestProvider_SetData(t *testing.T) {
 }
 
 func TestProvider_GetData(t *testing.T) {
+	sugar := createSugarLogger()
 	t.Run("success", func(t *testing.T) {
 		key := []byte{1, 1, 1}
 		value := []byte{0, 1, 3}
@@ -75,7 +80,7 @@ func TestProvider_GetData(t *testing.T) {
 		mockDs.On("ReadData", key).Return(encodedValue, nil)
 		mockCr.On("Decode", encodedValue).Return(value, nil)
 
-		p := NewProvider(mockCr, mockDs)
+		p := NewProvider(mockCr, mockDs, sugar)
 		data, err := p.GetData(key)
 		require.NoError(t, err)
 		assert.Equal(t, value, data)
@@ -91,7 +96,7 @@ func TestProvider_GetData(t *testing.T) {
 
 		mockDs.On("ReadData", key).Return(nil, fmt.Errorf("test"))
 
-		p := NewProvider(mockCr, mockDs)
+		p := NewProvider(mockCr, mockDs, sugar)
 		data, err := p.GetData(key)
 		require.Error(t, err, "error assert failed")
 		require.EqualValues(t, "provider, GetData method: read data error: test", err.Error())
@@ -109,11 +114,20 @@ func TestProvider_GetData(t *testing.T) {
 		mockDs.On("ReadData", key).Return(encodedValue, nil)
 		mockCr.On("Decode", encodedValue).Return(value, fmt.Errorf("test"))
 
-		p := NewProvider(mockCr, mockDs)
+		p := NewProvider(mockCr, mockDs, sugar)
 		data, err := p.GetData(key)
 		require.Error(t, err, "error assert failed")
 		require.EqualValues(t, "provider, GetData method: decode error: test", err.Error())
 		assert.Equal(t, "", string(data))
 		mockCr.AssertExpectations(t)
 	})
+}
+
+func createSugarLogger() *zap.SugaredLogger {
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Fatalf("can't initialize zap logger: %v", err)
+	}
+	sugar := logger.Sugar()
+	return sugar
 }

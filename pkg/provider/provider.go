@@ -4,15 +4,18 @@ package provider
 import (
 	"fmt"
 
+	"go.uber.org/zap"
+
 	"github.com/go-itools-internship/go-secret/pkg/secret"
 )
 
 type provider struct {
 	cryptographer secret.Cryptographer
 	dataSaver     secret.DataSaver
+	logger        *zap.Logger
 }
 
-func NewProvider(cryptographer secret.Cryptographer, dataSaver secret.DataSaver) *provider {
+func NewProvider(cryptographer secret.Cryptographer, dataSaver secret.DataSaver, logger *zap.SugaredLogger) *provider {
 	return &provider{cryptographer: cryptographer, dataSaver: dataSaver}
 }
 

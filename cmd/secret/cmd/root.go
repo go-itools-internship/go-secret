@@ -105,11 +105,11 @@ func (r *root) setCmd() *cobra.Command {
 		Long:  "it takes keys and a value and path from user and saves value in encrypted manner in specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var cr = crypto.NewCryptographer([]byte(cipherKey), r.logger)
-			ds, err := storage.NewFileVault(path, nil)
+			ds, err := storage.NewFileVault(path, r.logger)
 			if err != nil {
 				return fmt.Errorf("can't create storage by path: %w", err)
 			}
-			pr := provider.NewProvider(cr, ds)
+			pr := provider.NewProvider(cr, ds, r.logger)
 			err = pr.SetData([]byte(key), []byte(value))
 			if err != nil {
 				return fmt.Errorf("can't set data %w", err)
@@ -135,11 +135,11 @@ func (r *root) getCmd() *cobra.Command {
 		Long:  "it takes keys and path from user and get value in decrypted manner from specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var cr = crypto.NewCryptographer([]byte(cipherKey), r.logger)
-			ds, err := storage.NewFileVault(path, nil)
+			ds, err := storage.NewFileVault(path, r.logger)
 			if err != nil {
 				return fmt.Errorf("can't get storage by path: %w", err)
 			}
-			pr := provider.NewProvider(cr, ds)
+			pr := provider.NewProvider(cr, ds, r.logger)
 			data, err := pr.GetData([]byte(key))
 			if err != nil {
 				return fmt.Errorf("can't get data by key: %w", err)
@@ -162,17 +162,17 @@ func (r *root) serverCmd() *cobra.Command {
 		Use:   "server",
 		Short: "Run server runner mode to start the app as a daemon",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := storage.NewFileVault(path, nil)
+			ds, err := storage.NewFileVault(path, r.logger)
 			if err != nil {
 				return fmt.Errorf("can't get storage by path: %w", err)
 			}
 			store := make(map[string]api.MethodFactoryFunc)
 			store["local"] = func(cipher string) (secretApi.Provider, func()) {
 				cr := crypto.NewCryptographer([]byte(cipher), r.logger)
-				return provider.NewProvider(cr, ds), nil
+				return provider.NewProvider(cr, ds, r.logger), nil
 			}
 
-			handler := api.NewMethods(store, nil)
+			handler := api.NewMethods(store, r.logger)
 			router := chi.NewRouter()
 			srv := &http.Server{Addr: ":" + port, Handler: router}
 
@@ -190,19 +190,15 @@ func (r *root) serverCmd() *cobra.Command {
 				err := srv.ListenAndServe()
 				if err != nil {
 					r.logger.Errorf("connection error: %s", err)
-					//fmt.Println("connection error: %w", err)
 				}
 			}()
 			r.logger.Info("server started")
-			//fmt.Println("server started")
 
 			select {
 			case <-done:
 				r.logger.Info("server stopped")
-				//fmt.Println("server stopped")
 			case <-cmd.Context().Done():
 				r.logger.Info("server stopped with context")
-				//fmt.Println("server stopped with context")
 			}
 
 			go func(ctx context.Context) {
@@ -212,12 +208,10 @@ func (r *root) serverCmd() *cobra.Command {
 				err = srv.Shutdown(ctx)
 				if err != nil {
 					r.logger.Error("server Shutdown Failed", err)
-					//fmt.Println("server Shutdown Failed", err)
 				}
 			}(context.Background())
 			<-shutdownCh
 			r.logger.Info("server exit")
-			//fmt.Println("server exit")
 
 			return nil
 		},

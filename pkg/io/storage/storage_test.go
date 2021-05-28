@@ -2,8 +2,11 @@ package storage
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"testing"
+
+	"go.uber.org/zap"
 
 	"github.com/stretchr/testify/require"
 )
@@ -11,13 +14,14 @@ import (
 const testFilename = "testfile.json"
 
 func TestFileVault(t *testing.T) {
-	fileVault, err := NewFileVault(testFilename)
+	sugar := createSugarLogger()
+	fileVault, err := NewFileVault(testFilename, sugar)
 	require.NoError(t, err)
 
 	defer func() {
 		err = os.Remove(testFilename)
 		if err != nil {
-			t.Logf("file not removed")
+			sugar.Debug("file not removed")
 		}
 	}()
 
@@ -57,4 +61,13 @@ func TestFileVault(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, want, got)
 	})
+}
+
+func createSugarLogger() *zap.SugaredLogger {
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Fatalf("can't initialize zap logger: %v", err)
+	}
+	sugar := logger.Sugar()
+	return sugar
 }

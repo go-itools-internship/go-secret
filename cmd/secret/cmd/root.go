@@ -105,7 +105,7 @@ func (r *root) setCmd() *cobra.Command {
 		Long:  "it takes keys and a value and path from user and saves value in encrypted manner in specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var cr = crypto.NewCryptographer([]byte(cipherKey), r.logger)
-			ds, err := storage.NewFileVault(path)
+			ds, err := storage.NewFileVault(path, nil)
 			if err != nil {
 				return fmt.Errorf("can't create storage by path: %w", err)
 			}
@@ -135,7 +135,7 @@ func (r *root) getCmd() *cobra.Command {
 		Long:  "it takes keys and path from user and get value in decrypted manner from specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var cr = crypto.NewCryptographer([]byte(cipherKey), r.logger)
-			ds, err := storage.NewFileVault(path)
+			ds, err := storage.NewFileVault(path, nil)
 			if err != nil {
 				return fmt.Errorf("can't get storage by path: %w", err)
 			}
@@ -162,7 +162,7 @@ func (r *root) serverCmd() *cobra.Command {
 		Use:   "server",
 		Short: "Run server runner mode to start the app as a daemon",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := storage.NewFileVault(path)
+			ds, err := storage.NewFileVault(path, nil)
 			if err != nil {
 				return fmt.Errorf("can't get storage by path: %w", err)
 			}

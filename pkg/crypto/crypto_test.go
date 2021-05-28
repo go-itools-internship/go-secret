@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"bytes"
+	"log"
 	"testing"
 
 	"go.uber.org/zap"
@@ -64,7 +65,10 @@ func TestCryptographer_Decode(t *testing.T) {
 }
 
 func createSugarLogger() *zap.SugaredLogger {
-	logger, _ := zap.NewProduction()
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Fatalf("can't initialize zap logger: %v", err)
+	}
 	sugar := logger.Sugar()
 	return sugar
 }

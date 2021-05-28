@@ -111,7 +111,7 @@ func (r *root) setCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("can't create storage by path: %w", err)
 			}
-			pr := provider.NewProvider(cr, ds, r.logger)
+			pr := provider.NewProvider(cr, ds)
 			err = pr.SetData([]byte(key), []byte(value))
 			if err != nil {
 				return fmt.Errorf("can't set data %w", err)
@@ -141,7 +141,7 @@ func (r *root) getCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("can't get storage by path: %w", err)
 			}
-			pr := provider.NewProvider(cr, ds, r.logger)
+			pr := provider.NewProvider(cr, ds)
 			data, err := pr.GetData([]byte(key))
 			if err != nil {
 				return fmt.Errorf("can't get data by key: %w", err)
@@ -171,7 +171,7 @@ func (r *root) serverCmd() *cobra.Command {
 			store := make(map[string]api.MethodFactoryFunc)
 			store["local"] = func(cipher string) (secretApi.Provider, func()) {
 				cr := crypto.NewCryptographer([]byte(cipher), r.logger)
-				return provider.NewProvider(cr, ds, r.logger), nil
+				return provider.NewProvider(cr, ds), nil
 			}
 
 			handler := api.NewMethods(store, r.logger)

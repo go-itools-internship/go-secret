@@ -3,6 +3,8 @@ package crypto
 import (
 	"bytes"
 	"testing"
+
+	"go.uber.org/zap"
 )
 
 var tests = []struct {
@@ -30,7 +32,7 @@ func TestCryptographer_Encode(t *testing.T) {
 		t.Logf("\tTest: %d\tfor key %q and value %q", i+1, tt.key, tt.value)
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			encode := NewCryptographer(tt.key)
+			encode := NewCryptographer(tt.key, createSugarLogger())
 			encode.randomFlag = false
 			got, err := encode.Encode(tt.value)
 			if err != nil {
@@ -48,7 +50,7 @@ func TestCryptographer_Decode(t *testing.T) {
 		t.Logf("\tTest: %d\tfor key %q and value %q", i+1, tt.key, tt.value)
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			decode := NewCryptographer(tt.key)
+			decode := NewCryptographer(tt.key, createSugarLogger())
 			decode.randomFlag = false
 			got, err := decode.Decode(tt.want)
 			if err != nil {
@@ -59,4 +61,10 @@ func TestCryptographer_Decode(t *testing.T) {
 			}
 		})
 	}
+}
+
+func createSugarLogger() *zap.SugaredLogger {
+	logger, _ := zap.NewProduction()
+	sugar := logger.Sugar()
+	return sugar
 }

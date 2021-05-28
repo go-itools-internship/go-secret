@@ -11,20 +11,24 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+
+	"go.uber.org/zap"
 )
 
 type cryptographer struct {
 	key        []byte
 	randomFlag bool
+	logger     *zap.SugaredLogger
 }
 
-func NewCryptographer(key []byte) *cryptographer {
+func NewCryptographer(key []byte, logger *zap.SugaredLogger) *cryptographer {
 	h := sha256.New()
 	key32 := make([]byte, 32)
 	copy(key32, h.Sum(key))
 	return &cryptographer{
 		key:        key32,
 		randomFlag: true,
+		logger:     logger,
 	}
 }
 

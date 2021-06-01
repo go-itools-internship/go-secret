@@ -1,0 +1,19 @@
+version: "3"
+services:
+  api:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    volumes:
+      - secret:/data/file
+    ports:
+      - "8000:8097"
+    command: [ "server", "--port", "8097", "--path", "/data/file/file.json" ]
+    healthcheck:
+      test: [ "CMD", "server", "ping", "--port", "8097" ]
+      interval: 30s
+      retries: 3
+      timeout: 15s
+volumes:
+  secret:
+

@@ -5,16 +5,15 @@ services:
       context: ./
       dockerfile: Dockerfile
     volumes:
-      - ./filedata:/data/
+      - secret:/data/file
     ports:
       - "8000:8097"
     command: [ "server", "--port", "8097" ]
     healthcheck:
       test: [ "CMD", "server", "ping", "--port", "8097" ]
-      interval: 5m
-  redis:
-    image: "redis:alpine"
-    volumes:
-      - redis-data:/var/lib/redis
+      interval: 30s
+      retries: 3
+      timeout: 15s
 volumes:
-  redis-data:
+  secret:
+

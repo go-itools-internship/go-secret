@@ -1,0 +1,20 @@
+version: "3"
+services:
+  api:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    volumes:
+      - ./filedata:/data/
+    ports:
+      - "8000:8097"
+    command: [ "server", "--port", "8097" ]
+    healthcheck:
+      test: [ "CMD", "server", "ping", "--port", "8097" ]
+      interval: 5m
+  redis:
+    image: "redis:alpine"
+    volumes:
+      - redis-data:/var/lib/redis
+volumes:
+  redis-data:

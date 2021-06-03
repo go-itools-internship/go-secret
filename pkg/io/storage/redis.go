@@ -15,8 +15,8 @@ type redisVault struct {
 }
 
 // New create new redis client with context
-func New(ctx context.Context) *redisVault {
-	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "", DB: 0})
+func New(rdb *redis.Client, ctx context.Context) *redisVault {
+	//rdb := redis.NewClient(&redis.Options{Addr: url, Password: "", DB: 0})
 	rv := &redisVault{
 		rdb, ctx,
 	}

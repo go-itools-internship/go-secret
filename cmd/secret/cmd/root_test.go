@@ -15,6 +15,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-itools-internship/go-secret/pkg/io/storage"
+	"github.com/go-redis/redis/v8"
+
 	api "github.com/go-itools-internship/go-secret/pkg/http"
 	"github.com/stretchr/testify/require"
 )
@@ -50,6 +53,29 @@ func TestRoot_Set(t *testing.T) {
 			break // we iterate one time to get first key
 		}
 		require.EqualValues(t, key, got)
+	})
+	t.Run("expect set data only redis storage", func(t *testing.T) {
+		key := "key value"
+		path := ""
+		redisURL := "localhost:6379"
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+
+		r := New()
+		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--redis-url", redisURL})
+		err := r.Execute(ctx)
+		require.NoError(t, err)
+
+		_, err = os.Open(path)
+		require.Error(t, err)
+
+		key = "key"
+		encodedValue := "value"
+
+		rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
+		s := storage.New(rdb, ctx)
+		err = s.SaveData([]byte(key), []byte(encodedValue))
+		require.NoError(t, err)
 	})
 
 	t.Run("expect two keys", func(t *testing.T) {
@@ -89,47 +115,72 @@ func TestRoot_Set(t *testing.T) {
 }
 
 func TestRoot_Get(t *testing.T) {
-	key := "key value"
+	key := "key-value"
 	value := "60OBdPOOkSOu6kn8ZuMuXtAPVrUEFkPREydDwY6+ip/LrAFaHSc="
 	path := "testFile.txt"
-	file, err := os.Create(path)
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
+	t.Run("success", func(t *testing.T) {
+		file, err := os.Create(path)
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
 
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, os.Remove(path))
-	}()
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, os.Remove(path))
+		}()
 
-	defer func() {
-		require.NoError(t, file.Close())
-	}()
+		defer func() {
+			require.NoError(t, file.Close())
+		}()
 
-	fileTestData := make(map[string]string)
-	fileTestData[key] = value
-	require.NoError(t, json.NewEncoder(file).Encode(&fileTestData))
+		fileTestData := make(map[string]string)
+		fileTestData[key] = value
+		require.NoError(t, json.NewEncoder(file).Encode(&fileTestData))
 
-	r := New()
-	r.cmd.SetArgs([]string{"get", "--key", key, "--cipher-key", "ck", "--path", path})
-	executeErr := r.Execute(ctx)
-	require.NoError(t, executeErr)
+		r := New()
+		r.cmd.SetArgs([]string{"get", "--key", key, "--cipher-key", "ck", "--path", path})
+		executeErr := r.Execute(ctx)
+		require.NoError(t, executeErr)
 
-	testFile, err := os.Open(path)
-	require.NoError(t, err)
+		testFile, err := os.Open(path)
+		require.NoError(t, err)
 
-	defer func() {
-		require.NoError(t, testFile.Close())
-	}()
+		defer func() {
+			require.NoError(t, testFile.Close())
+		}()
 
-	fileData := make(map[string]string)
-	require.NoError(t, json.NewDecoder(testFile).Decode(&fileData))
-	var got string
-	require.Len(t, fileData, 1)
-	for _, value := range fileData {
-		got = value
-		break // we iterate one time to get first value
-	}
-	require.EqualValues(t, value, got)
+		fileData := make(map[string]string)
+		require.NoError(t, json.NewDecoder(testFile).Decode(&fileData))
+		var got string
+		require.Len(t, fileData, 1)
+		for _, value := range fileData {
+			got = value
+			break // we iterate one time to get first value
+		}
+		require.EqualValues(t, value, got)
+	})
+	t.Run("success get data from redis storage", func(t *testing.T) {
+		path := ""
+		redisURL := "localhost:6379"
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+
+		r := New()
+		r.cmd.SetArgs([]string{"set", "--key", key, "--value", value, "--cipher-key", "ck", "--redis-url", redisURL})
+		err := r.Execute(ctx)
+		require.NoError(t, err)
+
+		_, err = os.Open(path)
+		require.Error(t, err)
+
+		rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
+		s := storage.New(rdb, ctx)
+		err = s.SaveData([]byte(key), []byte(value))
+		require.NoError(t, err)
+
+		val, err := s.ReadData([]byte(key))
+		require.NoError(t, err)
+		require.EqualValues(t, value, val)
+	})
 }
 
 func TestRoot_Server(t *testing.T) {
@@ -149,6 +200,37 @@ func TestRoot_Server(t *testing.T) {
 			client := http.Client{Timeout: time.Second}
 			body := bytes.NewBufferString(`{"getter":"key-value","method":"local","value":"test-value-1"}`)
 			req := httptest.NewRequest(http.MethodPost, "http://localhost:"+port, body)
+			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
+			req.RequestURI = ""
+
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
+			require.NoError(t, resp.Body.Close())
+		})
+		t.Run("expect redis set method success", func(t *testing.T) {
+			expectedSipherKey := "key value"
+			redisURL := "localhost:6379"
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+
+			port, err := GetFreePort()
+			if err != nil {
+				fmt.Println(err)
+			}
+			r := New()
+			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--redis-url", redisURL})
+			go func() {
+				err := r.Execute(ctx)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}()
+			time.Sleep(2 * time.Second)
+
+			client := http.Client{Timeout: time.Second}
+			body := bytes.NewBufferString(`{"getter":"key-value","method":"remote","value":"test-value-1"}`)
+			req := httptest.NewRequest(http.MethodPost, "http://localhost:"+strconv.Itoa(port), body)
 			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
 			req.RequestURI = ""
 
@@ -207,6 +289,52 @@ func TestRoot_Server(t *testing.T) {
 			query := req.URL.Query()
 			query.Set(api.ParamGetterKey, key)
 			query.Set(api.ParamMethodKey, "local")
+			req.URL.RawQuery = query.Encode()
+
+			resp, err = client.Do(req)
+			require.NoError(t, err)
+			_, err = ioutil.ReadAll(resp.Body)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusOK, resp.StatusCode)
+			require.NoError(t, resp.Body.Close())
+		})
+		t.Run("expect redis get method success", func(t *testing.T) {
+			expectedSipherKey := "key value"
+			redisURL := "localhost:6379"
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+
+			port, err := GetFreePort()
+			if err != nil {
+				fmt.Println(err)
+			}
+			r := New()
+			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--redis-url", redisURL})
+			go func() {
+				err := r.Execute(ctx)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}()
+			time.Sleep(2 * time.Second)
+
+			client := http.Client{Timeout: time.Second}
+			body := bytes.NewBufferString(`{"getter":"key-value","method":"remote","value":"test-value-1"}`)
+			req := httptest.NewRequest(http.MethodPost, "http://localhost:"+strconv.Itoa(port), body)
+			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
+			req.RequestURI = ""
+
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
+			require.NoError(t, resp.Body.Close())
+
+			req = httptest.NewRequest(http.MethodGet, "http://localhost:"+strconv.Itoa(port), nil)
+			req.RequestURI = ""
+			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
+			query := req.URL.Query()
+			query.Set(api.ParamGetterKey, key)
+			query.Set(api.ParamMethodKey, "remote")
 			req.URL.RawQuery = query.Encode()
 
 			resp, err = client.Do(req)

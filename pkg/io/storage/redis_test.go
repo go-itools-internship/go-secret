@@ -25,7 +25,7 @@ func TestRedisVault_SaveData(t *testing.T) {
 		s := New(rdb, ctx)
 		err := s.SaveData([]byte(key), []byte(encodedValue))
 		require.Error(t, err)
-		require.EqualValues(t, "storage: Key can't be nil ", err.Error())
+		require.EqualValues(t, "storage: key can't be nil ", err.Error())
 	})
 	t.Run("wrong key error if key has been deleted", func(t *testing.T) {
 		nilEncodedValue := ""

@@ -16,7 +16,6 @@ type redisVault struct {
 
 // New create new redis client with context
 func New(rdb *redis.Client, ctx context.Context) *redisVault {
-	//rdb := redis.NewClient(&redis.Options{Addr: url, Password: "", DB: 0})
 	rv := &redisVault{
 		rdb, ctx,
 	}
@@ -28,7 +27,7 @@ func New(rdb *redis.Client, ctx context.Context) *redisVault {
 // 	encoded value to storage
 func (r *redisVault) SaveData(key, encodedValue []byte) error {
 	if bytes.Equal(key, []byte("")) {
-		return fmt.Errorf("storage: %w", errors.New("Key can't be nil "))
+		return errors.New("storage: key can't be nil ")
 	}
 	if bytes.Equal(encodedValue, []byte("")) {
 		fmt.Println("Key was deleted")
@@ -50,7 +49,7 @@ func (r *redisVault) SaveData(key, encodedValue []byte) error {
 // 	key to get value for pair key-value from redis storage (can't be nil)
 func (r *redisVault) ReadData(key []byte) ([]byte, error) {
 	if bytes.Equal(key, []byte("")) {
-		return nil, fmt.Errorf("storage: %w", errors.New("Key can't be nil "))
+		return nil, errors.New("storage: key can't be nil ")
 	}
 	val, err := r.redisClient.Get(r.ctx, string(key)).Result()
 	if err != nil {

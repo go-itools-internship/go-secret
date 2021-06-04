@@ -116,7 +116,6 @@ func (r *root) setCmd() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("can't set data %w", err)
 				}
-				break
 			case path != "":
 				ds, err := storage.NewFileVault(path)
 				if err != nil {
@@ -163,7 +162,6 @@ func (r *root) getCmd() *cobra.Command {
 					return fmt.Errorf("can't get data by key: %w", err)
 				}
 				logger.Info(string(data))
-				break
 			case path != "":
 				ds, err := storage.NewFileVault(path)
 				if err != nil {
@@ -207,7 +205,6 @@ func (r *root) serverCmd() *cobra.Command {
 					cr := crypto.NewCryptographer([]byte(cipher))
 					return provider.NewProvider(cr, dataRedis), nil
 				}
-				break
 			case path != "":
 				store["local"] = func(cipher string) (secretApi.Provider, func()) {
 					ds, err := storage.NewFileVault(path)

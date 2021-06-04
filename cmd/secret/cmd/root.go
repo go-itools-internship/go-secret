@@ -100,32 +100,33 @@ func (r *root) setCmd() *cobra.Command {
 	var value string
 	var path string
 	var redisURL string
-
 	var setCmd = &cobra.Command{
 		Use:   "set",
-		Short: "Saves data to the specified path in encrypted form",
-		Long:  "it takes keys and a value and path from user and saves value in encrypted manner in specified storage",
+		Short: "Saves data to the specified storage in encrypted form",
+		Long:  "it takes keys and a value from user and saves value in encrypted manner in specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var ds secretApi.DataSaver
 			var cr = crypto.NewCryptographer([]byte(cipherKey))
 			rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
+			err := rdb.Ping(r.cmd.Context()).Err()
+			if err != nil {
+				return fmt.Errorf("redis db is not reachable:  %w", err)
+			}
+
 			switch {
 			case redisURL != "":
-				ds := storage.New(rdb, r.cmd.Context())
-				pr := provider.NewProvider(cr, ds)
-				err := pr.SetData([]byte(key), []byte(value))
-				if err != nil {
-					return fmt.Errorf("can't set data %w", err)
-				}
+				ds = storage.NewRedisVault(rdb)
 			case path != "":
-				ds, err := storage.NewFileVault(path)
+				ds, err = storage.NewFileVault(path)
 				if err != nil {
 					return fmt.Errorf("can't create storage by path: %w", err)
 				}
-				pr := provider.NewProvider(cr, ds)
-				err = pr.SetData([]byte(key), []byte(value))
-				if err != nil {
-					return fmt.Errorf("can't set data %w", err)
-				}
+			}
+
+			pr := provider.NewProvider(cr, ds)
+			err = pr.SetData([]byte(key), []byte(value))
+			if err != nil {
+				return fmt.Errorf("can't set data %w", err)
 			}
 			return nil
 		},
@@ -146,34 +147,34 @@ func (r *root) getCmd() *cobra.Command {
 	var redisURL string
 	var getCmd = &cobra.Command{
 		Use:   "get",
-		Short: "Get data from specified path in decrypted form",
-		Long:  "it takes keys and path from user and get value in decrypted manner from specified storage",
+		Short: "Get data from specified storage in decrypted form",
+		Long:  "it takes keys from user and get value in decrypted manner from specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := r.logger.Named("get-cmd")
 			rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
+			err := rdb.Ping(r.cmd.Context()).Err()
+			if err != nil {
+				return fmt.Errorf("redis db is not reachable:  %w", err)
+			}
+			var ds secretApi.DataSaver
 			var cr = crypto.NewCryptographer([]byte(cipherKey))
 
 			switch {
 			case redisURL != "":
-				ds := storage.New(rdb, r.cmd.Context())
-				pr := provider.NewProvider(cr, ds)
-				data, err := pr.GetData([]byte(key))
-				if err != nil {
-					return fmt.Errorf("can't get data by key: %w", err)
-				}
-				logger.Info(string(data))
+				ds = storage.NewRedisVault(rdb)
 			case path != "":
-				ds, err := storage.NewFileVault(path)
+				ds, err = storage.NewFileVault(path)
 				if err != nil {
 					return fmt.Errorf("can't get storage by path: %w", err)
 				}
-				pr := provider.NewProvider(cr, ds)
-				data, err := pr.GetData([]byte(key))
-				if err != nil {
-					return fmt.Errorf("can't get data by key: %w", err)
-				}
-				logger.Info(string(data))
 			}
+
+			pr := provider.NewProvider(cr, ds)
+			data, err := pr.GetData([]byte(key))
+			if err != nil {
+				return fmt.Errorf("can't get data by key: %w", err)
+			}
+			logger.Info(string(data))
 			return nil
 		},
 	}
@@ -195,17 +196,21 @@ func (r *root) serverCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := r.logger.Named("server")
 			rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
-
+			err := rdb.Ping(r.cmd.Context()).Err()
+			if err != nil {
+				return fmt.Errorf("redis db is not reachable:  %w", err)
+			}
 			store := make(map[string]api.MethodFactoryFunc)
-			switch {
-			case redisURL != "":
+
+			if redisURL != "" {
 				// remote method set handler for redis storage
 				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
-					dataRedis := storage.New(rdb, cmd.Context())
+					dataRedis := storage.NewRedisVault(rdb)
 					cr := crypto.NewCryptographer([]byte(cipher))
 					return provider.NewProvider(cr, dataRedis), nil
 				}
-			case path != "":
+			}
+			if path != "" {
 				store["local"] = func(cipher string) (secretApi.Provider, func()) {
 					ds, err := storage.NewFileVault(path)
 					if err != nil {
@@ -215,6 +220,7 @@ func (r *root) serverCmd() *cobra.Command {
 					return provider.NewProvider(cr, ds), nil
 				}
 			}
+
 			handler := api.NewMethods(store, logger.Named("handler"))
 			router := chi.NewRouter()
 			srv := &http.Server{Addr: ":" + port, Handler: router}

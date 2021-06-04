@@ -73,7 +73,7 @@ func TestRoot_Set(t *testing.T) {
 		encodedValue := "value"
 
 		rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
-		s := storage.New(rdb, ctx)
+		s := storage.NewRedisVault(rdb)
 		err = s.SaveData([]byte(key), []byte(encodedValue))
 		require.NoError(t, err)
 	})
@@ -158,7 +158,7 @@ func TestRoot_Get(t *testing.T) {
 		}
 		require.EqualValues(t, value, got)
 	})
-	t.Run("success get data from redis storage", func(t *testing.T) {
+	t.Run("success set and read data from redis storage", func(t *testing.T) {
 		path := ""
 		redisURL := "localhost:6379"
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -173,7 +173,7 @@ func TestRoot_Get(t *testing.T) {
 		require.Error(t, err)
 
 		rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
-		s := storage.New(rdb, ctx)
+		s := storage.NewRedisVault(rdb)
 		err = s.SaveData([]byte(key), []byte(value))
 		require.NoError(t, err)
 
@@ -215,9 +215,7 @@ func TestRoot_Server(t *testing.T) {
 			defer cancel()
 
 			port, err := GetFreePort()
-			if err != nil {
-				fmt.Println(err)
-			}
+			require.NoError(t, err)
 			r := New()
 			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--redis-url", redisURL})
 			go func() {
@@ -293,6 +291,84 @@ func TestRoot_Server(t *testing.T) {
 			_, err = ioutil.ReadAll(resp.Body)
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusOK, resp.StatusCode)
+			require.NoError(t, resp.Body.Close())
+		})
+		t.Run("expect bad request status if set local method and try get by remote method", func(t *testing.T) {
+			expectedSipherKey := "key value"
+			//redisURL := "localhost:6379"
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+
+			port, err := GetFreePort()
+			if err != nil {
+				fmt.Println(err)
+			}
+			r := New()
+			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--path", path})
+			go func() {
+				err := r.Execute(ctx)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}()
+			time.Sleep(2 * time.Second)
+
+			client := http.Client{Timeout: time.Second}
+			body := bytes.NewBufferString(`{"getter":"key-value","method":"remote","value":"test-value-1"}`)
+			req := httptest.NewRequest(http.MethodPost, "http://localhost:"+strconv.Itoa(port), body)
+			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
+			req.RequestURI = ""
+
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusBadRequest, resp.StatusCode)
+			require.NoError(t, resp.Body.Close())
+		})
+		t.Run("expect bad request status if set remote method and try get by local method", func(t *testing.T) {
+			expectedSipherKey := "key value"
+			redisURL := "localhost:6379"
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+
+			port, err := GetFreePort()
+			if err != nil {
+				fmt.Println(err)
+			}
+			r := New()
+			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--redis-url", redisURL})
+			go func() {
+				err := r.Execute(ctx)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}()
+			time.Sleep(2 * time.Second)
+			defer func() {
+				require.NoError(t, os.Remove("file.txt"))
+			}()
+
+			client := http.Client{Timeout: time.Second}
+			body := bytes.NewBufferString(`{"getter":"key-value","method":"remote","value":"test-value-1"}`)
+			req := httptest.NewRequest(http.MethodPost, "http://localhost:"+strconv.Itoa(port), body)
+			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
+			req.RequestURI = ""
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			require.NoError(t, resp.Body.Close())
+
+			req = httptest.NewRequest(http.MethodGet, "http://localhost:"+strconv.Itoa(port), nil)
+			req.RequestURI = ""
+			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
+			query := req.URL.Query()
+			query.Set(api.ParamGetterKey, key)
+			query.Set(api.ParamMethodKey, "local")
+			req.URL.RawQuery = query.Encode()
+
+			resp, err = client.Do(req)
+			require.NoError(t, err)
+			data, err := ioutil.ReadAll(resp.Body)
+			require.NoError(t, err)
+			require.Contains(t, string(data), "cannot get data by key")
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect redis get method success", func(t *testing.T) {

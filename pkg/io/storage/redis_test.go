@@ -2,8 +2,8 @@ package storage
 
 import (
 	"context"
-	"fmt"
 	"testing"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 
@@ -14,22 +14,26 @@ func TestRedisVault_SaveData(t *testing.T) {
 	key := "key"
 	encodedValue := "value"
 	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "", DB: 0})
-	ctx := context.Background()
 	t.Run("success", func(t *testing.T) {
-		s := New(rdb, ctx)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		s := NewRedisVault(rdb)
 		err := s.SaveData([]byte(key), []byte(encodedValue))
 		require.NoError(t, err)
+		val, err := s.client.Get(ctx, key).Result()
+		require.NoError(t, err)
+		require.EqualValues(t, encodedValue, val)
 	})
 	t.Run("error if key equals nil", func(t *testing.T) {
 		key := ""
-		s := New(rdb, ctx)
+		s := NewRedisVault(rdb)
 		err := s.SaveData([]byte(key), []byte(encodedValue))
 		require.Error(t, err)
 		require.EqualValues(t, "storage: key can't be nil ", err.Error())
 	})
-	t.Run("wrong key error if key has been deleted", func(t *testing.T) {
+	t.Run("get nil value if key has been deleted", func(t *testing.T) {
 		nilEncodedValue := ""
-		s := New(rdb, ctx)
+		s := NewRedisVault(rdb)
 		err := s.SaveData([]byte(key), []byte(key))
 		require.NoError(t, err)
 		err = s.SaveData([]byte(key), []byte(nilEncodedValue))
@@ -37,7 +41,7 @@ func TestRedisVault_SaveData(t *testing.T) {
 
 		val, err := s.ReadData([]byte(key))
 		require.NoError(t, err)
-		require.NotEqualValues(t, "", val)
+		require.EqualValues(t, []byte(nil), val)
 	})
 }
 
@@ -45,23 +49,19 @@ func TestRedisVault_ReadData(t *testing.T) {
 	key := "key"
 	encodedValue := "value"
 	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "", DB: 0})
-	ctx := context.Background()
 	t.Run("success", func(t *testing.T) {
-		s := New(rdb, ctx)
-
+		s := NewRedisVault(rdb)
 		err := s.SaveData([]byte(key), []byte(encodedValue))
 		require.NoError(t, err)
-
 		val, err := s.ReadData([]byte(key))
 		require.NoError(t, err)
-		fmt.Println(string(val))
 		require.EqualValues(t, "value", val)
 	})
-	t.Run("error if wrong key", func(t *testing.T) {
+	t.Run("get nil value if wrong key", func(t *testing.T) {
 		wrongKey := "wrongKey"
-		s := New(rdb, ctx)
+		s := NewRedisVault(rdb)
 		val, err := s.ReadData([]byte(wrongKey))
 		require.NoError(t, err)
-		require.NotEqualValues(t, "value", val)
+		require.EqualValues(t, []byte(nil), val)
 	})
 }

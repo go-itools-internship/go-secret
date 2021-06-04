@@ -295,14 +295,11 @@ func TestRoot_Server(t *testing.T) {
 		})
 		t.Run("expect bad request status if set local method and try get by remote method", func(t *testing.T) {
 			expectedSipherKey := "key value"
-			//redisURL := "localhost:6379"
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 
 			port, err := GetFreePort()
-			if err != nil {
-				fmt.Println(err)
-			}
+			require.NoError(t, err)
 			r := New()
 			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--path", path})
 			go func() {
@@ -331,9 +328,7 @@ func TestRoot_Server(t *testing.T) {
 			defer cancel()
 
 			port, err := GetFreePort()
-			if err != nil {
-				fmt.Println(err)
-			}
+			require.NoError(t, err)
 			r := New()
 			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--redis-url", redisURL})
 			go func() {
@@ -378,9 +373,7 @@ func TestRoot_Server(t *testing.T) {
 			defer cancel()
 
 			port, err := GetFreePort()
-			if err != nil {
-				fmt.Println(err)
-			}
+			require.NoError(t, err)
 			r := New()
 			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--redis-url", redisURL})
 			go func() {

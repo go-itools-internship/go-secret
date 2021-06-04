@@ -20,6 +20,7 @@ func TestRedisVault_SaveData(t *testing.T) {
 		s := NewRedisVault(rdb)
 		err := s.SaveData([]byte(key), []byte(encodedValue))
 		require.NoError(t, err)
+
 		val, err := s.client.Get(ctx, key).Result()
 		require.NoError(t, err)
 		require.EqualValues(t, encodedValue, val)

@@ -195,27 +195,27 @@ func (r *root) serverCmd() *cobra.Command {
 		Short: "Run server runner mode to start the app as a daemon",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := r.logger.Named("server")
-			rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
-			err := rdb.Ping(r.cmd.Context()).Err()
-			if err != nil {
-				return fmt.Errorf("redis db is not reachable:  %w", err)
-			}
 			store := make(map[string]api.MethodFactoryFunc)
 
 			if redisURL != "" {
+				rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
+				err := rdb.Ping(r.cmd.Context()).Err()
+				if err != nil {
+					return fmt.Errorf("redis db is not reachable:  %w", err)
+				}
+				dataRedis := storage.NewRedisVault(rdb)
 				// remote method set handler for redis storage
 				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
-					dataRedis := storage.NewRedisVault(rdb)
 					cr := crypto.NewCryptographer([]byte(cipher))
 					return provider.NewProvider(cr, dataRedis), nil
 				}
 			}
 			if path != "" {
+				ds, err := storage.NewFileVault(path)
+				if err != nil {
+					logger.Errorf("can't get storage by path: %s", err)
+				}
 				store["local"] = func(cipher string) (secretApi.Provider, func()) {
-					ds, err := storage.NewFileVault(path)
-					if err != nil {
-						logger.Errorf("can't get storage by path: %s", err)
-					}
 					cr := crypto.NewCryptographer([]byte(cipher))
 					return provider.NewProvider(cr, ds), nil
 				}

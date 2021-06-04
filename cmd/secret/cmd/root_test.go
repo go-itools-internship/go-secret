@@ -15,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-itools-internship/go-secret/pkg/io/storage"
 	"github.com/go-redis/redis/v8"
 
 	api "github.com/go-itools-internship/go-secret/pkg/http"
@@ -73,9 +72,10 @@ func TestRoot_Set(t *testing.T) {
 		encodedValue := "value"
 
 		rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
-		s := storage.NewRedisVault(rdb)
-		err = s.SaveData([]byte(key), []byte(encodedValue))
+
+		val, err := rdb.Get(ctx, key).Result()
 		require.NoError(t, err)
+		require.EqualValues(t, encodedValue, val)
 	})
 
 	t.Run("expect two keys", func(t *testing.T) {
@@ -159,27 +159,25 @@ func TestRoot_Get(t *testing.T) {
 		require.EqualValues(t, value, got)
 	})
 	t.Run("success set and read data from redis storage", func(t *testing.T) {
-		path := ""
+		//path := ""
 		redisURL := "localhost:6379"
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
-
 		r := New()
+
 		r.cmd.SetArgs([]string{"set", "--key", key, "--value", value, "--cipher-key", "ck", "--redis-url", redisURL})
 		err := r.Execute(ctx)
 		require.NoError(t, err)
 
-		_, err = os.Open(path)
-		require.Error(t, err)
-
-		rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
-		s := storage.NewRedisVault(rdb)
-		err = s.SaveData([]byte(key), []byte(value))
-		require.NoError(t, err)
-
-		val, err := s.ReadData([]byte(key))
-		require.NoError(t, err)
-		require.EqualValues(t, value, val)
+		r.cmd.SetArgs([]string{"get", "--key", key, "--cipher-key", "ck", "--redis-url", redisURL})
+		executeErr := r.Execute(ctx)
+		require.NoError(t, executeErr)
+		//out := bytes.NewBuffer([]byte{'v'})
+		// find cmd output set o
+		//func (c *Command) SetOutput(output io.Writer) {
+		//	c.outWriter = output
+		//	c.errWriter = output
+		//}
 	})
 }
 
@@ -311,10 +309,18 @@ func TestRoot_Server(t *testing.T) {
 			time.Sleep(2 * time.Second)
 
 			client := http.Client{Timeout: time.Second}
-			body := bytes.NewBufferString(`{"getter":"key-value","method":"remote","value":"test-value-1"}`)
+			body := bytes.NewBufferString(`{"getter":"key-value","method":"local","value":"test-value-1"}`)
 			req := httptest.NewRequest(http.MethodPost, "http://localhost:"+strconv.Itoa(port), body)
 			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
 			req.RequestURI = ""
+
+			req = httptest.NewRequest(http.MethodGet, "http://localhost:"+strconv.Itoa(port), nil)
+			req.RequestURI = ""
+			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
+			query := req.URL.Query()
+			query.Set(api.ParamGetterKey, key)
+			query.Set(api.ParamMethodKey, "remote")
+			req.URL.RawQuery = query.Encode()
 
 			resp, err := client.Do(req)
 			require.NoError(t, err)

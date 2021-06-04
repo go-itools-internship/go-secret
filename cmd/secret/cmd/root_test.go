@@ -211,7 +211,7 @@ func TestRoot_Server(t *testing.T) {
 		t.Run("expect redis set method success", func(t *testing.T) {
 			expectedSipherKey := "key value"
 			redisURL := "localhost:6379"
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			port, err := GetFreePort()
@@ -245,9 +245,6 @@ func TestRoot_Server(t *testing.T) {
 			defer cancel()
 
 			port := createAndExecuteCliCommand(ctx)
-			defer func() {
-				require.NoError(t, os.Remove(path))
-			}()
 
 			client := http.Client{Timeout: time.Second}
 			body := bytes.NewBufferString(`{"getter":"key-value","method":"local","value":"test-value-1"}`)
@@ -345,14 +342,10 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("middleware check success", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			port := createAndExecuteCliCommand(ctx)
-
-			defer func() {
-				require.NoError(t, os.Remove(path))
-			}()
 
 			client := http.Client{Timeout: time.Second}
 			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost:%s/ping", port), nil)
@@ -410,9 +403,6 @@ func TestRoot_Server(t *testing.T) {
 			expectedSipherKey := "key value"
 
 			port := createAndExecuteCliCommand(ctx)
-			defer func() {
-				require.NoError(t, os.Remove(path))
-			}()
 
 			client := http.Client{Timeout: time.Second}
 			req := httptest.NewRequest(http.MethodGet, "http://localhost:"+port+"/errorUrl", nil)
@@ -470,7 +460,7 @@ func TestRoot_ServerPing(t *testing.T) {
 		// Parse server url for wright flags format
 		sURL, h, p := ParseURL(s.URL)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		r := New()
 		r.cmd.SetArgs([]string{"server", "ping", "--url", fmt.Sprintf("%s://%s", sURL.Scheme, h), "--port", p, "--route", route})
@@ -486,7 +476,7 @@ func TestRoot_ServerPing(t *testing.T) {
 		// Parse server url for wright flags format
 		sURL, h, p := ParseURL(s.URL)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		r := New()
 		r.cmd.SetArgs([]string{"server", "ping", "--url", fmt.Sprintf("%s://%s", sURL.Scheme, h), "--port", p, "--route", route})
@@ -497,7 +487,7 @@ func TestRoot_ServerPing(t *testing.T) {
 	t.Run("error when server connection refused", func(t *testing.T) {
 		testURL := "http://localhost"
 		port := "8880"
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		r := New()
 		r.cmd.SetArgs([]string{"server", "ping", "--url", testURL, "--port", port, "--route", route})

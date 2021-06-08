@@ -15,8 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-itools-internship/go-secret/pkg/io/storage"
-
 	"github.com/go-redis/redis/v8"
 
 	api "github.com/go-itools-internship/go-secret/pkg/http"
@@ -56,7 +54,7 @@ func TestRoot_Set(t *testing.T) {
 		require.EqualValues(t, key, got)
 	})
 	t.Run("expect set data only redis storage", func(t *testing.T) {
-		key := "key value"
+		key := "12345"
 		path := ""
 		redisURL := "localhost:6379"
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -70,17 +68,11 @@ func TestRoot_Set(t *testing.T) {
 		_, err = os.Open(path)
 		require.Error(t, err)
 
-		key = "key"
-		encodedValue := "value"
-
 		rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
-		s := storage.NewRedisVault(rdb)
-		err = s.SaveData([]byte(key), []byte(encodedValue))
-		require.NoError(t, err)
 
 		val, err := rdb.Get(ctx, key).Result()
 		require.NoError(t, err)
-		require.EqualValues(t, encodedValue, val)
+		require.NotEmpty(t, val)
 	})
 
 	t.Run("expect two keys", func(t *testing.T) {
@@ -169,17 +161,20 @@ func TestRoot_Get(t *testing.T) {
 		defer cancel()
 
 		r := New()
-		b := bytes.NewBufferString("test")
+
 		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--redis-url", redisURL})
 		executeErr := r.Execute(ctx)
 		require.NoError(t, executeErr)
 
+		var b bytes.Buffer
+		r.cmd.SetOut(&b)
+
 		r.cmd.SetArgs([]string{"get", "--key", key, "--cipher-key", "ck", "--redis-url", redisURL})
 		err := r.Execute(ctx)
 		require.NoError(t, err)
-		out, err := ioutil.ReadAll(b)
+		out := b.String()
 		require.NoError(t, err)
-		require.EqualValues(t, "test", string(out))
+		require.EqualValues(t, "test value\n", out)
 	})
 }
 

@@ -150,7 +150,6 @@ func (r *root) getCmd() *cobra.Command {
 		Short: "Get data from specified storage in decrypted form",
 		Long:  "it takes keys from user and get value in decrypted manner from specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			logger := r.logger.Named("get-cmd")
 			rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
 			err := rdb.Ping(r.cmd.Context()).Err()
 			if err != nil {
@@ -174,7 +173,7 @@ func (r *root) getCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("can't get data by key: %w", err)
 			}
-			logger.Info(string(data))
+			cmd.Println(string(data))
 			return nil
 		},
 	}
@@ -213,7 +212,7 @@ func (r *root) serverCmd() *cobra.Command {
 			if path != "" {
 				ds, err := storage.NewFileVault(path)
 				if err != nil {
-					logger.Errorf("can't get storage by path: %s", err)
+					return fmt.Errorf("can't get storage by path: %s", err)
 				}
 				store["local"] = func(cipher string) (secretApi.Provider, func()) {
 					cr := crypto.NewCryptographer([]byte(cipher))

@@ -1,6 +1,7 @@
 version: "3"
 services:
   api:
+    container_name: secret-api-with-redis
     build:
       context: ./
       dockerfile: Dockerfile

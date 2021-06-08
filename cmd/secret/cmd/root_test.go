@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-itools-internship/go-secret/pkg/io/storage"
+
 	"github.com/go-redis/redis/v8"
 
 	api "github.com/go-itools-internship/go-secret/pkg/http"
@@ -72,6 +74,9 @@ func TestRoot_Set(t *testing.T) {
 		encodedValue := "value"
 
 		rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
+		s := storage.NewRedisVault(rdb)
+		err = s.SaveData([]byte(key), []byte(encodedValue))
+		require.NoError(t, err)
 
 		val, err := rdb.Get(ctx, key).Result()
 		require.NoError(t, err)

@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-redis/redis/v8"
+
 	"github.com/go-chi/chi/v5/middleware"
 
 	api "github.com/go-itools-internship/go-secret/pkg/http"
@@ -97,17 +99,30 @@ func (r *root) setCmd() *cobra.Command {
 	var cipherKey string
 	var value string
 	var path string
-
+	var redisURL string
 	var setCmd = &cobra.Command{
 		Use:   "set",
-		Short: "Saves data to the specified path in encrypted form",
-		Long:  "it takes keys and a value and path from user and saves value in encrypted manner in specified storage",
+		Short: "Saves data to the specified storage in encrypted form",
+		Long:  "it takes keys and a value from user and saves value in encrypted manner in specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var ds secretApi.DataSaver
 			var cr = crypto.NewCryptographer([]byte(cipherKey))
-			ds, err := storage.NewFileVault(path)
+			rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
+			err := rdb.Ping(r.cmd.Context()).Err()
 			if err != nil {
-				return fmt.Errorf("can't create storage by path: %w", err)
+				return fmt.Errorf("redis db is not reachable:  %w", err)
 			}
+
+			switch {
+			case redisURL != "":
+				ds = storage.NewRedisVault(rdb)
+			case path != "":
+				ds, err = storage.NewFileVault(path)
+				if err != nil {
+					return fmt.Errorf("can't create storage by path: %w", err)
+				}
+			}
+
 			pr := provider.NewProvider(cr, ds)
 			err = pr.SetData([]byte(key), []byte(value))
 			if err != nil {
@@ -120,6 +135,7 @@ func (r *root) setCmd() *cobra.Command {
 	setCmd.Flags().StringVarP(&key, "key", "k", key, "key for pair key-value")
 	setCmd.Flags().StringVarP(&cipherKey, "cipher-key", "c", cipherKey, "cipher key for data encryption and decryption")
 	setCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
+	setCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
 
 	return setCmd
 }
@@ -128,29 +144,43 @@ func (r *root) getCmd() *cobra.Command {
 	var key string
 	var cipherKey string
 	var path string
+	var redisURL string
 	var getCmd = &cobra.Command{
 		Use:   "get",
-		Short: "Get data from specified path in decrypted form",
-		Long:  "it takes keys and path from user and get value in decrypted manner from specified storage",
+		Short: "Get data from specified storage in decrypted form",
+		Long:  "it takes keys from user and get value in decrypted manner from specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			logger := r.logger.Named("get-cmd")
-			var cr = crypto.NewCryptographer([]byte(cipherKey))
-			ds, err := storage.NewFileVault(path)
+			rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
+			err := rdb.Ping(r.cmd.Context()).Err()
 			if err != nil {
-				return fmt.Errorf("can't get storage by path: %w", err)
+				return fmt.Errorf("redis db is not reachable:  %w", err)
 			}
+			var ds secretApi.DataSaver
+			var cr = crypto.NewCryptographer([]byte(cipherKey))
+
+			switch {
+			case redisURL != "":
+				ds = storage.NewRedisVault(rdb)
+			case path != "":
+				ds, err = storage.NewFileVault(path)
+				if err != nil {
+					return fmt.Errorf("can't get storage by path: %w", err)
+				}
+			}
+
 			pr := provider.NewProvider(cr, ds)
 			data, err := pr.GetData([]byte(key))
 			if err != nil {
 				return fmt.Errorf("can't get data by key: %w", err)
 			}
-			logger.Info(string(data))
+			cmd.Println(string(data))
 			return nil
 		},
 	}
 	getCmd.Flags().StringVarP(&key, "key", "k", key, "key for pair key-value")
 	getCmd.Flags().StringVarP(&cipherKey, "cipher-key", "c", cipherKey, "cipher key for data encryption and decryption")
 	getCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the value will be got")
+	getCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
 
 	return getCmd
 }
@@ -158,19 +188,36 @@ func (r *root) getCmd() *cobra.Command {
 func (r *root) serverCmd() *cobra.Command {
 	var path string
 	var port string
+	var redisURL string
 	var serverCmd = &cobra.Command{
 		Use:   "server",
 		Short: "Run server runner mode to start the app as a daemon",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := r.logger.Named("server")
-			ds, err := storage.NewFileVault(path)
-			if err != nil {
-				return fmt.Errorf("can't get storage by path: %w", err)
-			}
 			store := make(map[string]api.MethodFactoryFunc)
-			store["local"] = func(cipher string) (secretApi.Provider, func()) {
-				cr := crypto.NewCryptographer([]byte(cipher))
-				return provider.NewProvider(cr, ds), nil
+
+			if redisURL != "" {
+				rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
+				err := rdb.Ping(r.cmd.Context()).Err()
+				if err != nil {
+					return fmt.Errorf("redis db is not reachable:  %w", err)
+				}
+				dataRedis := storage.NewRedisVault(rdb)
+				// remote method set handler for redis storage
+				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
+					cr := crypto.NewCryptographer([]byte(cipher))
+					return provider.NewProvider(cr, dataRedis), nil
+				}
+			}
+			if path != "" {
+				ds, err := storage.NewFileVault(path)
+				if err != nil {
+					return fmt.Errorf("can't get storage by path: %s", err)
+				}
+				store["local"] = func(cipher string) (secretApi.Provider, func()) {
+					cr := crypto.NewCryptographer([]byte(cipher))
+					return provider.NewProvider(cr, ds), nil
+				}
 			}
 
 			handler := api.NewMethods(store, logger.Named("handler"))
@@ -206,7 +253,7 @@ func (r *root) serverCmd() *cobra.Command {
 				defer close(shutdownCh)
 				ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 				defer cancel()
-				err = srv.Shutdown(ctx)
+				err := srv.Shutdown(ctx)
 				if err != nil {
 					logger.Error("listener shutdown failed", err)
 				}
@@ -219,6 +266,7 @@ func (r *root) serverCmd() *cobra.Command {
 	}
 	serverCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
 	serverCmd.Flags().StringVarP(&port, "port", "t", "8888", "localhost address")
+	serverCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
 	serverCmd.AddCommand(r.serverPingCmd())
 	return serverCmd
 }

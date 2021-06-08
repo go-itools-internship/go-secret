@@ -8,12 +8,20 @@ services:
       - secret:/data/file
     ports:
       - "8000:8097"
-    command: [ "server", "--port", "8097", "--path", "/data/file/file.json" ]
+    command: [ "server", "--port", "8097", "--path", "/data/file/file.json", "--redis-url", "redis:6379" ]
+    depends_on:
+      - redis
     healthcheck:
       test: [ "CMD", "server", "ping", "--port", "8097" ]
       interval: 30s
       retries: 3
       timeout: 15s
+  redis:
+    image: "redis:alpine"
+    volumes:
+      - redis-data:/data
 volumes:
   secret:
+  redis-data:
+
 

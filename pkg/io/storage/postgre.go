@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -13,10 +14,11 @@ type postgreVault struct {
 	db *sqlx.DB
 }
 
-var schema = `CREATE TABLE vault (
-	key text,
-	value text,
-)`
+var schema = `CREATE TABLE postgres (
+	key text NOT NULL,
+	value text NOT NULL,
+	PRIMARY KEY (key)
+);`
 
 type store struct {
 	key   string
@@ -25,37 +27,47 @@ type store struct {
 
 // NewPostgreVault create new postgreSQL  client
 func NewPostgreVault(p *sqlx.DB) *postgreVault {
-
 	pv := &postgreVault{
 		db: p,
 	}
 	return pv
 }
 
+// SaveData put data in postgres storage by key and encoded value
+// 	key to set in postgres storage
+// 	encoded value to storage
 func (r *postgreVault) SaveData(key, encodedValue []byte) error {
-	tx := r.db.MustBegin()
-	tx.MustExec("INSERT INTO vault (key, value) values ($1,$2)", key, encodedValue)
-	err := tx.Commit()
+	ctx := context.Background()
+	tx, _ := r.db.BeginTxx(ctx, nil)
+	defer func() {
+		if err := r.db.Close(); err != nil {
+			fmt.Println("postgre: can't close db: ", err.Error())
+		}
+	}()
+	r.db.MustBegin()
+	tx.MustExec("INSERT INTO postgres (key , value) VALUES ($1,$2)", string(key), string(encodedValue))
+	err := tx.Commit() // TODO fix error handler
 	if err != nil {
-		err := tx.Rollback()
+		err = tx.Rollback()
 		if err != nil {
-			return err
+			return fmt.Errorf("postgres: %w", err)
 		}
 	}
 	return nil
 }
 
+// ReadData get data from postgres storage by key
+// 	key to get value for pair key-value from postgres storage
 func (r *postgreVault) ReadData(key []byte) ([]byte, error) {
-	tx := r.db.MustBegin()
-	data := store{}
-	err := tx.Select(&data, "SELECT value from vault WHERE key=$1", string(key))
-	fmt.Println(data.value)
-	err = tx.Commit()
-	if err != nil {
-		err := tx.Rollback()
-		if err != nil {
-			return nil, err
+	ctx := context.Background()
+	var val []string
+	err := r.db.SelectContext(ctx, &val, "SELECT value FROM postgres WHERE key=$1 LIMIT 1", string(key))
+	defer func() {
+		if err := r.db.Close(); err != nil {
+			fmt.Println("postgre: can't close db: ", err.Error())
 		}
-	}
-	return []byte(data.value), err
+	}()
+	fmt.Println(val) //TODO for testing (delete before pull request)
+
+	return []byte(val[0]), err
 }

@@ -1,0 +1,34 @@
+version: "3"
+services:
+  api:
+    container_name: secret-api-with-redis
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    volumes:
+      - secret:/data/file
+    ports:
+      - "8000:8097"
+    command: [ "server", "--port", "8097", "--path", "/data/file/file.json", "--redis-url", "redis:6379" ]
+    depends_on:
+      - postgres
+    healthcheck:
+      test: [ "CMD", "server", "ping", "--port", "8097" ]
+      interval: 30s
+      retries: 3
+      timeout: 15s
+
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      volumes:
+        - postgres-data:/db
+      ports:
+        - 5432:5432
+  volumes:
+    secret:
+    postgres-data:

@@ -1,28 +1,17 @@
 package storage
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/github"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
 type postgreVault struct {
 	db *sqlx.DB
-}
-
-var schema = `CREATE TABLE postgres (
-	key text NOT NULL,
-	value text NOT NULL,
-	PRIMARY KEY (key)
-);`
-
-type store struct {
-	key   string
-	value string
 }
 
 // NewPostgreVault create new postgreSQL  client
@@ -38,20 +27,24 @@ func NewPostgreVault(p *sqlx.DB) *postgreVault {
 // 	encoded value to storage
 func (r *postgreVault) SaveData(key, encodedValue []byte) error {
 	ctx := context.Background()
+	if bytes.Equal(key, []byte("")) {
+		return errors.New("postgre: key can't be nil ")
+	}
+
 	tx, _ := r.db.BeginTxx(ctx, nil)
-	defer func() {
-		if err := r.db.Close(); err != nil {
-			fmt.Println("postgre: can't close db: ", err.Error())
-		}
-	}()
 	r.db.MustBegin()
-	tx.MustExec("INSERT INTO postgres (key , value) VALUES ($1,$2)", string(key), string(encodedValue))
+	if bytes.Equal(encodedValue, []byte("")) {
+		tx.MustExecContext(ctx, "DELETE FROM postgres WHERE key=$1", string(key))
+	} else {
+		tx.MustExecContext(ctx, "INSERT INTO postgres (key , value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2", string(key), string(encodedValue))
+	}
 	err := tx.Commit() // TODO fix error handler
 	if err != nil {
 		err = tx.Rollback()
 		if err != nil {
-			return fmt.Errorf("postgres: %w", err)
+			return fmt.Errorf("postgres: can't rollback %w", err)
 		}
+		return fmt.Errorf("postgres: can't commit %w", err)
 	}
 	return nil
 }
@@ -60,14 +53,18 @@ func (r *postgreVault) SaveData(key, encodedValue []byte) error {
 // 	key to get value for pair key-value from postgres storage
 func (r *postgreVault) ReadData(key []byte) ([]byte, error) {
 	ctx := context.Background()
-	var val []string
+	if bytes.Equal(key, []byte("")) {
+		return nil, errors.New("postgre: key can't be nil ")
+	}
+	var val []struct {
+		Value string `db:"value"`
+	}
 	err := r.db.SelectContext(ctx, &val, "SELECT value FROM postgres WHERE key=$1 LIMIT 1", string(key))
-	defer func() {
-		if err := r.db.Close(); err != nil {
-			fmt.Println("postgre: can't close db: ", err.Error())
-		}
-	}()
-	fmt.Println(val) //TODO for testing (delete before pull request)
-
-	return []byte(val[0]), err
+	if err != nil {
+		return nil, fmt.Errorf("postgres: %w", err)
+	}
+	if len(val) == 0 {
+		return nil, errors.New("postgre: key not found ")
+	}
+	return []byte(val[0].Value), nil
 }

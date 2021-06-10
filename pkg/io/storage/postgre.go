@@ -30,7 +30,6 @@ func (r *postgreVault) SaveData(key, encodedValue []byte) error {
 	if bytes.Equal(key, []byte("")) {
 		return errors.New("postgre: key can't be nil ")
 	}
-
 	tx, _ := r.db.BeginTxx(ctx, nil)
 	r.db.MustBegin()
 	if bytes.Equal(encodedValue, []byte("")) {

@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jmoiron/sqlx"
+
 	"github.com/go-redis/redis/v8"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -100,6 +102,7 @@ func (r *root) setCmd() *cobra.Command {
 	var value string
 	var path string
 	var redisURL string
+	var postgresURL string
 	var setCmd = &cobra.Command{
 		Use:   "set",
 		Short: "Saves data to the specified storage in encrypted form",
@@ -107,8 +110,13 @@ func (r *root) setCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var ds secretApi.DataSaver
 			var cr = crypto.NewCryptographer([]byte(cipherKey))
+			connStr := fmt.Sprintf("postgres://postgres:postgres@%s/postgres?sslmode=disable", postgresURL)
+			pdb, err := sqlx.Connect("postgres", connStr)
+			if err != nil {
+				return fmt.Errorf("postgres url is not reachable:  %w", err)
+			}
 			rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
-			err := rdb.Ping(r.cmd.Context()).Err()
+			err = rdb.Ping(r.cmd.Context()).Err()
 			if err != nil {
 				return fmt.Errorf("redis db is not reachable:  %w", err)
 			}
@@ -116,6 +124,8 @@ func (r *root) setCmd() *cobra.Command {
 			switch {
 			case redisURL != "":
 				ds = storage.NewRedisVault(rdb)
+			case postgresURL != "":
+				ds = storage.NewPostgreVault(pdb)
 			case path != "":
 				ds, err = storage.NewFileVault(path)
 				if err != nil {
@@ -136,6 +146,7 @@ func (r *root) setCmd() *cobra.Command {
 	setCmd.Flags().StringVarP(&cipherKey, "cipher-key", "c", cipherKey, "cipher key for data encryption and decryption")
 	setCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
 	setCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
+	setCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: localhost:5432")
 
 	return setCmd
 }
@@ -145,6 +156,7 @@ func (r *root) getCmd() *cobra.Command {
 	var cipherKey string
 	var path string
 	var redisURL string
+	var postgresURL string
 	var getCmd = &cobra.Command{
 		Use:   "get",
 		Short: "Get data from specified storage in decrypted form",
@@ -155,12 +167,19 @@ func (r *root) getCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("redis db is not reachable:  %w", err)
 			}
+			connStr := fmt.Sprintf("postgres://postgres:postgres@%s/postgres?sslmode=disable", postgresURL)
+			pdb, err := sqlx.Connect("postgres", connStr)
+			if err != nil {
+				return fmt.Errorf("postgres url is not reachable:  %w", err)
+			}
 			var ds secretApi.DataSaver
 			var cr = crypto.NewCryptographer([]byte(cipherKey))
 
 			switch {
 			case redisURL != "":
 				ds = storage.NewRedisVault(rdb)
+			case postgresURL != "":
+				ds = storage.NewPostgreVault(pdb)
 			case path != "":
 				ds, err = storage.NewFileVault(path)
 				if err != nil {
@@ -181,6 +200,7 @@ func (r *root) getCmd() *cobra.Command {
 	getCmd.Flags().StringVarP(&cipherKey, "cipher-key", "c", cipherKey, "cipher key for data encryption and decryption")
 	getCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the value will be got")
 	getCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
+	getCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: localhost:5432")
 
 	return getCmd
 }
@@ -189,6 +209,7 @@ func (r *root) serverCmd() *cobra.Command {
 	var path string
 	var port string
 	var redisURL string
+	var postgresURL string
 	var serverCmd = &cobra.Command{
 		Use:   "server",
 		Short: "Run server runner mode to start the app as a daemon",
@@ -196,7 +217,8 @@ func (r *root) serverCmd() *cobra.Command {
 			logger := r.logger.Named("server")
 			store := make(map[string]api.MethodFactoryFunc)
 
-			if redisURL != "" {
+			switch {
+			case redisURL != "":
 				rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
 				err := rdb.Ping(r.cmd.Context()).Err()
 				if err != nil {
@@ -207,6 +229,18 @@ func (r *root) serverCmd() *cobra.Command {
 				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
 					cr := crypto.NewCryptographer([]byte(cipher))
 					return provider.NewProvider(cr, dataRedis), nil
+				}
+			case postgresURL != "":
+				connStr := fmt.Sprintf("postgres://postgres:postgres@%s/postgres?sslmode=disable", postgresURL)
+				pdb, err := sqlx.Connect("postgres", connStr)
+				if err != nil {
+					return fmt.Errorf("postgres url is not reachable:  %w", err)
+				}
+				dataPostgres := storage.NewPostgreVault(pdb)
+				// remote method set handler for redis storage
+				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
+					cr := crypto.NewCryptographer([]byte(cipher))
+					return provider.NewProvider(cr, dataPostgres), nil
 				}
 			}
 			if path != "" {
@@ -267,6 +301,7 @@ func (r *root) serverCmd() *cobra.Command {
 	serverCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
 	serverCmd.Flags().StringVarP(&port, "port", "t", "8888", "localhost address")
 	serverCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
+	serverCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: localhost:5432")
 	serverCmd.AddCommand(r.serverPingCmd())
 	return serverCmd
 }

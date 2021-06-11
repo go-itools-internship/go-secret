@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -35,7 +36,7 @@ func (r *postgreVault) SaveData(key, encodedValue []byte) error {
 	if bytes.Equal(encodedValue, []byte("")) {
 		tx.MustExecContext(ctx, "DELETE FROM postgres WHERE key=$1", string(key))
 	} else {
-		tx.MustExecContext(ctx, "INSERT INTO postgres (key , value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2", string(key), string(encodedValue))
+		tx.MustExecContext(ctx, "INSERT INTO postgres (key , value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2", string(key), hex.EncodeToString(encodedValue))
 	}
 	err := tx.Commit()
 	if err != nil {
@@ -65,5 +66,9 @@ func (r *postgreVault) ReadData(key []byte) ([]byte, error) {
 	if len(val) == 0 {
 		return nil, errors.New("postgre: key not found ")
 	}
-	return []byte(val[0].Value), nil
+	value, err := hex.DecodeString(val[0].Value)
+	if err != nil {
+		return nil, fmt.Errorf("postgres: cant't decode value %w", err)
+	}
+	return value, nil
 }

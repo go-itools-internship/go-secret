@@ -45,7 +45,7 @@ func TestRoot_Server(t *testing.T) {
 		})
 		t.Run("expect postgres set method success", func(t *testing.T) {
 			expectedSipherKey := "key value"
-			postgresURL := "localhost:5432"
+			postgresURL := "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 

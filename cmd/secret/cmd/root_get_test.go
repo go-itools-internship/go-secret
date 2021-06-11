@@ -77,7 +77,7 @@ func TestRoot_Get(t *testing.T) {
 		require.EqualValues(t, "test value\n", out)
 	})
 	t.Run("success after get postgres command", func(t *testing.T) {
-		postgresURL := "localhost:5432"
+		postgresURL := "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 

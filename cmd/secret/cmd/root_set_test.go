@@ -70,7 +70,7 @@ func TestRoot_Set(t *testing.T) {
 	t.Run("expect set data only postgres storage", func(t *testing.T) {
 		key := "12345"
 		path := ""
-		postgresURL := "postgres:5432"
+		postgresURL := "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 
@@ -86,7 +86,7 @@ func TestRoot_Set(t *testing.T) {
 		db, err := sqlx.Connect("postgres", connStr)
 
 		d := storage.NewPostgreVault(db)
-		data, err := d.ReadData([]byte("k1234"))
+		data, err := d.ReadData([]byte("12345"))
 		require.NoError(t, err)
 		require.EqualValues(t, "value1234", string(data))
 

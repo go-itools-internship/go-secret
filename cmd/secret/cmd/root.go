@@ -11,6 +11,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/golang-migrate/migrate/v4/source/github"
+
 	"github.com/jmoiron/sqlx"
 
 	"github.com/go-redis/redis/v8"
@@ -103,6 +108,7 @@ func (r *root) setCmd() *cobra.Command {
 	var path string
 	var redisURL string
 	var postgresURL string
+	var migration string
 	var setCmd = &cobra.Command{
 		Use:   "set",
 		Short: "Saves data to the specified storage in encrypted form",
@@ -120,9 +126,11 @@ func (r *root) setCmd() *cobra.Command {
 				}
 				ds = storage.NewRedisVault(rdb)
 			case postgresURL != "":
-				connStr := "user=postgres password=postgres  sslmode=disable"
-				//connStr := fmt.Sprintf("postgres://postgres:postgres@%s/postgres?sslmode=disable", postgresURL)
-				pdb, err := sqlx.Connect("postgres", connStr)
+				//err := migrateUp(postgresURL)
+				//if err != nil {
+				//	return fmt.Errorf("can't migrate db:  %w", err)
+				//}
+				pdb, err := sqlx.Connect("postgres", postgresURL)
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
@@ -148,6 +156,7 @@ func (r *root) setCmd() *cobra.Command {
 	setCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
 	setCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
 	setCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: localhost:5432")
+	setCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up  route to scripts/migrations folder. Example: file://../../")
 
 	return setCmd
 }
@@ -158,6 +167,7 @@ func (r *root) getCmd() *cobra.Command {
 	var path string
 	var redisURL string
 	var postgresURL string
+	var migration string
 	var getCmd = &cobra.Command{
 		Use:   "get",
 		Short: "Get data from specified storage in decrypted form",
@@ -176,6 +186,13 @@ func (r *root) getCmd() *cobra.Command {
 				}
 				ds = storage.NewRedisVault(rdb)
 			case postgresURL != "":
+				//err := migrateUp(postgresURL)
+				//if err != nil {
+				//	if err.Error() == "can't migrate db:  no change" {
+				//		//break
+				//	}
+				//	//return fmt.Errorf("can't migrate db:  %w", err)
+				//}
 				connStr := "user=postgres password=postgres  sslmode=disable"
 				pdb, err := sqlx.Connect("postgres", connStr)
 				if err != nil {
@@ -203,6 +220,7 @@ func (r *root) getCmd() *cobra.Command {
 	getCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the value will be got")
 	getCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
 	getCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: localhost:5432")
+	getCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up  route to scripts/migrations folder. Example: file://../../")
 
 	return getCmd
 }
@@ -212,6 +230,7 @@ func (r *root) serverCmd() *cobra.Command {
 	var port string
 	var redisURL string
 	var postgresURL string
+	var migration string
 	var serverCmd = &cobra.Command{
 		Use:   "server",
 		Short: "Run server runner mode to start the app as a daemon",
@@ -233,9 +252,11 @@ func (r *root) serverCmd() *cobra.Command {
 					return provider.NewProvider(cr, dataRedis), nil
 				}
 			case postgresURL != "":
-				//connStr := fmt.Sprintf("postgres://postgres:postgres@%s/postgres?sslmode=disable", postgresURL)
-				connStr := "user=postgres password=postgres  sslmode=disable"
-				pdb, err := sqlx.Connect("postgres", connStr)
+				//err := migrateUp(postgresURL)
+				//if err != nil {
+				//	return fmt.Errorf("can't migrate db:  %w", err)
+				//}
+				pdb, err := sqlx.Connect("postgres", postgresURL)
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
@@ -304,7 +325,8 @@ func (r *root) serverCmd() *cobra.Command {
 	serverCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
 	serverCmd.Flags().StringVarP(&port, "port", "t", "8888", "localhost address")
 	serverCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
-	serverCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: localhost:5432")
+	serverCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: postgres://postgres:postgres@%s/postgres?sslmode=disable")
+	serverCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up  route to scripts/migrations folder. Example: file://../../")
 	serverCmd.AddCommand(r.serverPingCmd())
 	return serverCmd
 }
@@ -347,3 +369,19 @@ func (r *root) serverPingCmd() *cobra.Command {
 	serverPingCmd.Flags().DurationVarP(&timeout, "timeout", "t", 15*time.Second, "max request time to make a request. Default: '15 seconds'")
 	return serverPingCmd
 }
+
+func migrateUp(postgres string, source string) error {
+	m, err := migrate.New(
+		fmt.Sprintf("%sscripts/migrations", source),
+		postgres)
+	if err != nil {
+		return err
+	}
+	err = m.Up()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+//TODO add migration flag with  /scriots/migrations

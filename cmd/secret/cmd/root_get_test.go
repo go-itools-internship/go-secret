@@ -76,4 +76,25 @@ func TestRoot_Get(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, "test value\n", out)
 	})
+	t.Run("success after get postgres command", func(t *testing.T) {
+		postgresURL := "localhost:5432"
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+
+		r := New()
+
+		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL})
+		executeErr := r.Execute(ctx)
+		require.NoError(t, executeErr)
+
+		var b bytes.Buffer
+		r.cmd.SetOut(&b)
+
+		r.cmd.SetArgs([]string{"get", "--key", key, "--cipher-key", "ck", "--postgres-url", postgresURL})
+		err := r.Execute(ctx)
+		require.NoError(t, err)
+		out := b.String()
+		require.NoError(t, err)
+		require.EqualValues(t, "test value\n", out)
+	})
 }

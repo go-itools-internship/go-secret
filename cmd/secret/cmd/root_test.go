@@ -92,9 +92,9 @@ func TestRoot_Server(t *testing.T) {
 				}
 			}()
 			time.Sleep(2 * time.Second)
-			//defer func() {
-			//	require.NoError(t, os.Remove("file.txt"))
-			//}()
+			defer func() {
+				require.NoError(t, os.Remove("file.txt"))
+			}()
 
 			client := http.Client{Timeout: time.Second}
 			body := bytes.NewBufferString(`{"getter":"key-value","method":"remote","value":"test-value-1"}`)

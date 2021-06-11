@@ -9,7 +9,7 @@ services:
       - secret:/data/file
     ports:
       - "8000:8097"
-    command: [ "server", "--port", "8097", "--path", "/data/file/file.json", "--postgres-url", "postgres:5423" ]
+    command: [ "server", "--port", "8097", "--path", "/data/file/file.json", "--postgres-url", "postgres:5432" ]
     depends_on:
       - postgres
     healthcheck:
@@ -20,15 +20,15 @@ services:
 
   postgres:
     image: postgres:alpine
-    restart: always
+    restart: unless-stopped
+    ports:
+      - 5432:5432
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
       - postgres-data:/data/db
-    ports:
-      - 5432:5432
 volumes:
   secret:
   postgres-data:

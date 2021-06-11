@@ -37,7 +37,7 @@ func (r *postgreVault) SaveData(key, encodedValue []byte) error {
 	} else {
 		tx.MustExecContext(ctx, "INSERT INTO postgres (key , value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2", string(key), string(encodedValue))
 	}
-	err := tx.Commit() // TODO fix error handler
+	err := tx.Commit()
 	if err != nil {
 		err = tx.Rollback()
 		if err != nil {

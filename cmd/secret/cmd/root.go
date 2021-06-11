@@ -110,31 +110,32 @@ func (r *root) setCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var ds secretApi.DataSaver
 			var cr = crypto.NewCryptographer([]byte(cipherKey))
-			connStr := fmt.Sprintf("postgres://postgres:postgres@%s/postgres?sslmode=disable", postgresURL)
-			pdb, err := sqlx.Connect("postgres", connStr)
-			if err != nil {
-				return fmt.Errorf("postgres url is not reachable:  %w", err)
-			}
-			rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
-			err = rdb.Ping(r.cmd.Context()).Err()
-			if err != nil {
-				return fmt.Errorf("redis db is not reachable:  %w", err)
-			}
 
 			switch {
 			case redisURL != "":
+				rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
+				err := rdb.Ping(r.cmd.Context()).Err()
+				if err != nil {
+					return fmt.Errorf("redis db is not reachable:  %w", err)
+				}
 				ds = storage.NewRedisVault(rdb)
 			case postgresURL != "":
+				connStr := "user=postgres password=postgres  sslmode=disable"
+				//connStr := fmt.Sprintf("postgres://postgres:postgres@%s/postgres?sslmode=disable", postgresURL)
+				pdb, err := sqlx.Connect("postgres", connStr)
+				if err != nil {
+					return fmt.Errorf("postgres url is not reachable:  %w", err)
+				}
 				ds = storage.NewPostgreVault(pdb)
 			case path != "":
-				ds, err = storage.NewFileVault(path)
+				_, err := storage.NewFileVault(path)
 				if err != nil {
 					return fmt.Errorf("can't create storage by path: %w", err)
 				}
 			}
 
 			pr := provider.NewProvider(cr, ds)
-			err = pr.SetData([]byte(key), []byte(value))
+			err := pr.SetData([]byte(key), []byte(value))
 			if err != nil {
 				return fmt.Errorf("can't set data %w", err)
 			}
@@ -162,26 +163,27 @@ func (r *root) getCmd() *cobra.Command {
 		Short: "Get data from specified storage in decrypted form",
 		Long:  "it takes keys from user and get value in decrypted manner from specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
-			err := rdb.Ping(r.cmd.Context()).Err()
-			if err != nil {
-				return fmt.Errorf("redis db is not reachable:  %w", err)
-			}
-			connStr := fmt.Sprintf("postgres://postgres:postgres@%s/postgres?sslmode=disable", postgresURL)
-			pdb, err := sqlx.Connect("postgres", connStr)
-			if err != nil {
-				return fmt.Errorf("postgres url is not reachable:  %w", err)
-			}
+
 			var ds secretApi.DataSaver
 			var cr = crypto.NewCryptographer([]byte(cipherKey))
 
 			switch {
 			case redisURL != "":
+				rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
+				err := rdb.Ping(r.cmd.Context()).Err()
+				if err != nil {
+					return fmt.Errorf("redis db is not reachable:  %w", err)
+				}
 				ds = storage.NewRedisVault(rdb)
 			case postgresURL != "":
+				connStr := "user=postgres password=postgres  sslmode=disable"
+				pdb, err := sqlx.Connect("postgres", connStr)
+				if err != nil {
+					return fmt.Errorf("postgres url is not reachable:  %w", err)
+				}
 				ds = storage.NewPostgreVault(pdb)
 			case path != "":
-				ds, err = storage.NewFileVault(path)
+				_, err := storage.NewFileVault(path)
 				if err != nil {
 					return fmt.Errorf("can't get storage by path: %w", err)
 				}
@@ -231,7 +233,8 @@ func (r *root) serverCmd() *cobra.Command {
 					return provider.NewProvider(cr, dataRedis), nil
 				}
 			case postgresURL != "":
-				connStr := fmt.Sprintf("postgres://postgres:postgres@%s/postgres?sslmode=disable", postgresURL)
+				//connStr := fmt.Sprintf("postgres://postgres:postgres@%s/postgres?sslmode=disable", postgresURL)
+				connStr := "user=postgres password=postgres  sslmode=disable"
 				pdb, err := sqlx.Connect("postgres", connStr)
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)

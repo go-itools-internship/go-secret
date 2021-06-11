@@ -7,6 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-itools-internship/go-secret/pkg/io/storage"
+	"github.com/jmoiron/sqlx"
+
 	"github.com/go-redis/redis/v8"
 	"github.com/stretchr/testify/require"
 )
@@ -63,6 +66,30 @@ func TestRoot_Set(t *testing.T) {
 		val, err := rdb.Get(ctx, key).Result()
 		require.NoError(t, err)
 		require.NotEmpty(t, val)
+	})
+	t.Run("expect set data only postgres storage", func(t *testing.T) {
+		key := "12345"
+		path := ""
+		postgresURL := "postgres:5432"
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+
+		r := New()
+		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL})
+		err := r.Execute(ctx)
+		require.NoError(t, err)
+
+		_, err = os.Open(path)
+		require.Error(t, err)
+
+		connStr := "user=postgres password=postgres  sslmode=disable"
+		db, err := sqlx.Connect("postgres", connStr)
+
+		d := storage.NewPostgreVault(db)
+		data, err := d.ReadData([]byte("k1234"))
+		require.NoError(t, err)
+		require.EqualValues(t, "value1234", string(data))
+
 	})
 
 	t.Run("expect two keys", func(t *testing.T) {

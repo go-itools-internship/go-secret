@@ -14,7 +14,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/require"
-	_ "github.com/stretchr/testify/require"
 )
 
 const connStr = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"

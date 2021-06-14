@@ -78,7 +78,8 @@ func TestRoot_Set(t *testing.T) {
 		_, err = os.Open(path)
 		require.Error(t, err)
 
-		db, err := sqlx.Connect("postgres", postgresURL)
+		db, err := sqlx.ConnectContext(ctx, "postgres", postgresURL)
+		require.NoError(t, err)
 
 		d := storage.NewPostgreVault(db)
 		data, err := d.ReadData([]byte("12345"))

@@ -31,20 +31,22 @@ func (r *postgreVault) SaveData(key, encodedValue []byte) error {
 	if bytes.Equal(key, []byte("")) {
 		return errors.New("postgre: key can't be nil ")
 	}
-	tx, _ := r.db.BeginTxx(ctx, nil)
-	r.db.MustBegin()
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("postgres: can't begin transaction  %w", err)
+	}
 	if bytes.Equal(encodedValue, []byte("")) {
-		_, err := tx.ExecContext(ctx, "DELETE FROM postgres WHERE key=$1", string(key))
+		_, err = tx.ExecContext(ctx, "DELETE FROM postgres WHERE key=$1", string(key))
 		if err != nil {
 			return fmt.Errorf("postgres: can't delete data %w", err)
 		}
 	} else {
-		_, err := tx.ExecContext(ctx, "INSERT INTO postgres (key , value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2", string(key), hex.EncodeToString(encodedValue))
+		_, err = tx.ExecContext(ctx, "INSERT INTO postgres (key , value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2", string(key), hex.EncodeToString(encodedValue))
 		if err != nil {
 			return fmt.Errorf("postgres: can't insert data %w", err)
 		}
 	}
-	err := tx.Commit()
+	err = tx.Commit()
 	if err != nil {
 		err = tx.Rollback()
 		if err != nil {

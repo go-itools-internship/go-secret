@@ -51,7 +51,7 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect postgres set method success", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancel()
 			defer migrateDown()
 			port, err := GetFreePort()
@@ -76,6 +76,10 @@ func TestRoot_Server(t *testing.T) {
 			req.RequestURI = ""
 
 			resp, err := client.Do(req)
+			require.NoError(t, err)
+			data, err := ioutil.ReadAll(resp.Body)
+			require.NoError(t, err)
+			fmt.Println(resp.Status, data)
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())

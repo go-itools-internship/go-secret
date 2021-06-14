@@ -15,10 +15,10 @@ func TestRoot_Get(t *testing.T) {
 	value := "60OBdPOOkSOu6kn8ZuMuXtAPVrUEFkPREydDwY6+ip/LrAFaHSc="
 	t.Run("success", func(t *testing.T) {
 		file, err := os.Create(path)
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		require.NoError(t, err)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		require.NoError(t, err)
 		defer func() {
 			require.NoError(t, os.Remove(path))
 		}()

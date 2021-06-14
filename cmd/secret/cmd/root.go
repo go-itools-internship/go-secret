@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -128,7 +129,11 @@ func (r *root) setCmd() *cobra.Command {
 			case postgresURL != "":
 				err := migrateUp(postgresURL, migration)
 				if err != nil {
-					logger.Infof("can't migrate db:  %s", err)
+					if errors.Is(err, migrate.ErrNoChange) {
+						logger.Infof("can't migrate db:  %s", err)
+					} else {
+						return fmt.Errorf("migrate error :  %w", err)
+					}
 				}
 				pdb, err := sqlx.Connect("postgres", postgresURL)
 				if err != nil {
@@ -136,7 +141,8 @@ func (r *root) setCmd() *cobra.Command {
 				}
 				ds = storage.NewPostgreVault(pdb)
 			case path != "":
-				_, err := storage.NewFileVault(path)
+				var err error
+				ds, err = storage.NewFileVault(path)
 				if err != nil {
 					return fmt.Errorf("can't create storage by path: %w", err)
 				}
@@ -182,13 +188,17 @@ func (r *root) getCmd() *cobra.Command {
 				rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
 				err := rdb.Ping(r.cmd.Context()).Err()
 				if err != nil {
-					fmt.Println("can't migrate db:  %w", err)
+					return fmt.Errorf("redis db is not reachable:  %w", err)
 				}
 				ds = storage.NewRedisVault(rdb)
 			case postgresURL != "":
 				err := migrateUp(postgresURL, migration)
 				if err != nil {
-					logger.Infof("root: db already exist: %s", err)
+					if errors.Is(err, migrate.ErrNoChange) {
+						logger.Infof("can't migrate db:  %s", err)
+					} else {
+						return fmt.Errorf("migrate error :  %w", err)
+					}
 				}
 				connStr := "user=postgres password=postgres  sslmode=disable"
 				pdb, err := sqlx.Connect("postgres", connStr)
@@ -197,7 +207,8 @@ func (r *root) getCmd() *cobra.Command {
 				}
 				ds = storage.NewPostgreVault(pdb)
 			case path != "":
-				_, err := storage.NewFileVault(path)
+				var err error
+				ds, err = storage.NewFileVault(path)
 				if err != nil {
 					return fmt.Errorf("can't get storage by path: %w", err)
 				}
@@ -251,7 +262,11 @@ func (r *root) serverCmd() *cobra.Command {
 			case postgresURL != "":
 				err := migrateUp(postgresURL, migration)
 				if err != nil {
-					fmt.Println(fmt.Errorf("can't migrate db:  %w", err))
+					if errors.Is(err, migrate.ErrNoChange) {
+						logger.Infof("can't migrate db:  %s", err)
+					} else {
+						return fmt.Errorf("migrate error :  %w", err)
+					}
 				}
 				pdb, err := sqlx.Connect("postgres", postgresURL)
 				if err != nil {

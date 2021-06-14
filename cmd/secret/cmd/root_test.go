@@ -49,7 +49,7 @@ func TestRoot_Server(t *testing.T) {
 		})
 		t.Run("expect postgres set method success", func(t *testing.T) {
 			postgresURL := "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
-			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			port, err := GetFreePort()
@@ -62,7 +62,7 @@ func TestRoot_Server(t *testing.T) {
 					fmt.Println(err)
 				}
 			}()
-			time.Sleep(2 * time.Second)
+			time.Sleep(3 * time.Second)
 			defer func() {
 				require.NoError(t, os.Remove("file.txt"))
 			}()

@@ -86,7 +86,6 @@ func TestRoot_Set(t *testing.T) {
 		data, err := d.ReadData([]byte("12345"))
 		require.NoError(t, err)
 		require.NotEmpty(t, data)
-
 	})
 
 	t.Run("expect two keys", func(t *testing.T) {

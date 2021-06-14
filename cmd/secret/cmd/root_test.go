@@ -81,7 +81,7 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect redis set method success", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancel()
 
 			port, err := GetFreePort()
@@ -563,7 +563,7 @@ func GetFreePort() (int, error) {
 func migrateDown() {
 	mdown, err := migrate.New(
 		"file://../../../scripts/migrations",
-		"postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable")
+		postgresURL)
 	if err != nil {
 		fmt.Println(err)
 	}

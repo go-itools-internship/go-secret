@@ -72,7 +72,7 @@ func TestRoot_Set(t *testing.T) {
 		defer cancel()
 
 		r := New()
-		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL})
+		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", "file://../../../"})
 		err := r.Execute(ctx)
 		require.NoError(t, err)
 

@@ -87,7 +87,7 @@ func TestRoot_Get(t *testing.T) {
 		var b bytes.Buffer
 		r.cmd.SetOut(&b)
 
-		r.cmd.SetArgs([]string{"get", "--key", key, "--cipher-key", "ck", "--postgres-url", postgresURL})
+		r.cmd.SetArgs([]string{"get", "--key", key, "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", "file://../../../"})
 		err := r.Execute(ctx)
 		require.NoError(t, err)
 		out := b.String()

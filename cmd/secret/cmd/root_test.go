@@ -62,12 +62,12 @@ func TestRoot_Server(t *testing.T) {
 					fmt.Println(err)
 				}
 			}()
-			time.Sleep(3 * time.Second)
+			time.Sleep(2 * time.Second)
 			defer func() {
 				require.NoError(t, os.Remove("file.txt"))
 			}()
 
-			client := http.Client{Timeout: time.Second}
+			client := http.Client{Timeout: 5 * time.Second}
 			body := bytes.NewBufferString(`{"getter":"key-value","method":"remote","value":"test-value-1"}`)
 			req := httptest.NewRequest(http.MethodPost, "http://localhost:"+strconv.Itoa(port), body)
 			req.Header.Set(api.ParamCipherKey, expectedSipherKey)

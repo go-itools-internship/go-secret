@@ -381,7 +381,7 @@ func (r *root) serverPingCmd() *cobra.Command {
 	return serverPingCmd
 }
 
-func migrateUp(postgres string, source string) error {
+func migrateUp(postgres, source string) error {
 	m, err := migrate.New(
 		fmt.Sprintf("%sscripts/migrations", source),
 		postgres)

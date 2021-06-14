@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+
 	api "github.com/go-itools-internship/go-secret/pkg/http"
 	"github.com/stretchr/testify/require"
 )
@@ -23,6 +25,7 @@ const (
 	path              = "testFile.txt"
 	expectedSipherKey = "key value"
 	redisURL          = "localhost:6379"
+	postgresURL       = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 )
 
 func TestRoot_Server(t *testing.T) {
@@ -48,10 +51,9 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect postgres set method success", func(t *testing.T) {
-			postgresURL := "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-
+			defer migrateDown()
 			port, err := GetFreePort()
 			require.NoError(t, err)
 			r := New()
@@ -67,7 +69,7 @@ func TestRoot_Server(t *testing.T) {
 				require.NoError(t, os.Remove("file.txt"))
 			}()
 
-			client := http.Client{Timeout: 5 * time.Second}
+			client := http.Client{Timeout: 2 * time.Second}
 			body := bytes.NewBufferString(`{"getter":"key-value","method":"remote","value":"test-value-1"}`)
 			req := httptest.NewRequest(http.MethodPost, "http://localhost:"+strconv.Itoa(port), body)
 			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
@@ -295,10 +297,9 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect postgres get method success", func(t *testing.T) {
-			postgresURL := "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
-			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-
+			defer migrateDown()
 			port, err := GetFreePort()
 			require.NoError(t, err)
 			r := New()
@@ -557,4 +558,17 @@ func GetFreePort() (int, error) {
 		}
 	}(l)
 	return l.Addr().(*net.TCPAddr).Port, nil
+}
+
+func migrateDown() {
+	mdown, err := migrate.New(
+		"file://../../../scripts/migrations",
+		"postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable")
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = mdown.Down()
+	if err != nil {
+		fmt.Println(err)
+	}
 }

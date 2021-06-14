@@ -135,7 +135,7 @@ func (r *root) setCmd() *cobra.Command {
 						return fmt.Errorf("migrate error :  %w", err)
 					}
 				}
-				pdb, err := sqlx.Connect("postgres", postgresURL)
+				pdb, err := sqlx.ConnectContext(r.cmd.Context(), "postgres", postgresURL)
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
@@ -200,8 +200,7 @@ func (r *root) getCmd() *cobra.Command {
 						return fmt.Errorf("migrate error :  %w", err)
 					}
 				}
-				connStr := "user=postgres password=postgres  sslmode=disable"
-				pdb, err := sqlx.Connect("postgres", connStr)
+				pdb, err := sqlx.ConnectContext(r.cmd.Context(), "postgres", postgresURL)
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
@@ -268,7 +267,7 @@ func (r *root) serverCmd() *cobra.Command {
 						return fmt.Errorf("migrate error :  %w", err)
 					}
 				}
-				pdb, err := sqlx.Connect("postgres", postgresURL)
+				pdb, err := sqlx.ConnectContext(r.cmd.Context(), "postgres", postgresURL)
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
@@ -337,7 +336,7 @@ func (r *root) serverCmd() *cobra.Command {
 	serverCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
 	serverCmd.Flags().StringVarP(&port, "port", "t", "8888", "localhost address")
 	serverCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
-	serverCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: postgres://postgres:postgres@%s/postgres?sslmode=disable")
+	serverCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable\"")
 	serverCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up  route to scripts/migrations folder. Example: file://../../")
 	serverCmd.AddCommand(r.serverPingCmd())
 	return serverCmd

@@ -1,8 +1,10 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 
@@ -15,10 +17,14 @@ import (
 	_ "github.com/stretchr/testify/require"
 )
 
+const connStr = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+
 func TestPostgreVault_SaveData(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		connStr := "user=postgres password=postgres  sslmode=disable"
-		db, err := sqlx.Connect("postgres", connStr)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		db, err := sqlx.ConnectContext(ctx, "postgres", connStr)
+		require.NoError(t, err)
 
 		migrateUp()
 		defer migrateDown()
@@ -31,8 +37,10 @@ func TestPostgreVault_SaveData(t *testing.T) {
 		require.NoError(t, err)
 	})
 	t.Run("success update if try set repeated key in db", func(t *testing.T) {
-		connStr := "user=postgres password=postgres  sslmode=disable"
-		db, err := sqlx.Connect("postgres", connStr)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		db, err := sqlx.ConnectContext(ctx, "postgres", connStr)
+		require.NoError(t, err)
 
 		migrateUp()
 		defer migrateDown()
@@ -52,8 +60,10 @@ func TestPostgreVault_SaveData(t *testing.T) {
 		require.EqualValues(t, "value", string(data))
 	})
 	t.Run("key nil error if try set nil value into db", func(t *testing.T) {
-		connStr := "user=postgres password=postgres  sslmode=disable"
-		db, err := sqlx.Connect("postgres", connStr)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		db, err := sqlx.ConnectContext(ctx, "postgres", connStr)
+		require.NoError(t, err)
 
 		migrateUp()
 		defer migrateDown()
@@ -74,8 +84,9 @@ func TestPostgreVault_SaveData(t *testing.T) {
 	})
 	t.Run("error if set nil key", func(t *testing.T) {
 		key := ""
-		connStr := "user=postgres password=postgres  sslmode=disable"
-		db, err := sqlx.Connect("postgres", connStr)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		db, err := sqlx.ConnectContext(ctx, "postgres", connStr)
 		require.NoError(t, err)
 
 		migrateUp()
@@ -90,8 +101,9 @@ func TestPostgreVault_SaveData(t *testing.T) {
 
 func TestPostgreVault_ReadData(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		connStr := "user=postgres password=postgres  sslmode=disable"
-		db, err := sqlx.Connect("postgres", connStr)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		db, err := sqlx.ConnectContext(ctx, "postgres", connStr)
 		require.NoError(t, err)
 
 		migrateUp()
@@ -109,8 +121,9 @@ func TestPostgreVault_ReadData(t *testing.T) {
 	})
 	t.Run("error if get by nil key", func(t *testing.T) {
 		key := ""
-		connStr := "user=postgres password=postgres  sslmode=disable"
-		db, err := sqlx.Connect("postgres", connStr)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		db, err := sqlx.ConnectContext(ctx, "postgres", connStr)
 		require.NoError(t, err)
 
 		migrateUp()

@@ -74,10 +74,9 @@ func TestRoot_Get(t *testing.T) {
 		require.EqualValues(t, "test value\n", out)
 	})
 	t.Run("success after get postgres command", func(t *testing.T) {
-		postgresURL := "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-
+		defer migrateDown()
 		r := New()
 
 		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", "file://../../../"})

@@ -67,10 +67,9 @@ func TestRoot_Set(t *testing.T) {
 	t.Run("expect set data only postgres storage", func(t *testing.T) {
 		key := "12345"
 		path := ""
-		postgresURL := "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
-
+		defer migrateDown()
 		r := New()
 		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", "file://../../../"})
 		err := r.Execute(ctx)
@@ -79,8 +78,7 @@ func TestRoot_Set(t *testing.T) {
 		_, err = os.Open(path)
 		require.Error(t, err)
 
-		connStr := "user=postgres password=postgres  sslmode=disable"
-		db, err := sqlx.Connect("postgres", connStr)
+		db, err := sqlx.Connect("postgres", postgresURL)
 
 		d := storage.NewPostgreVault(db)
 		data, err := d.ReadData([]byte("12345"))

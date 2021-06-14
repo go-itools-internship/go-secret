@@ -51,7 +51,7 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect postgres set method success", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			defer migrateDown()
 			port, err := GetFreePort()
@@ -69,7 +69,7 @@ func TestRoot_Server(t *testing.T) {
 				require.NoError(t, os.Remove("file.txt"))
 			}()
 
-			client := http.Client{Timeout: 2 * time.Second}
+			client := http.Client{Timeout: time.Second}
 			body := bytes.NewBufferString(`{"getter":"key-value","method":"remote","value":"test-value-1"}`)
 			req := httptest.NewRequest(http.MethodPost, "http://localhost:"+strconv.Itoa(port), body)
 			req.Header.Set(api.ParamCipherKey, expectedSipherKey)

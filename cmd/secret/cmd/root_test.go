@@ -18,12 +18,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	key               = "key-value"
+	path              = "testFile.txt"
+	expectedSipherKey = "key value"
+	redisURL          = "localhost:6379"
+)
+
 func TestRoot_Server(t *testing.T) {
-	key := "key-value"
-	path := "testFile.txt"
 	t.Run("set by key", func(t *testing.T) {
 		t.Run("expect set method success", func(t *testing.T) {
-			expectedSipherKey := "key value"
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 			// get free port after cli creating
@@ -44,15 +48,14 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect postgres set method success", func(t *testing.T) {
-			expectedSipherKey := "key value"
 			postgresURL := "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancel()
 
 			port, err := GetFreePort()
 			require.NoError(t, err)
 			r := New()
-			r.cmd.SetArgs([]string{"server", "--postgres-url", postgresURL})
+			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--postgres-url", postgresURL, "--migration", "file://../../../"})
 			go func() {
 				err := r.Execute(ctx)
 				if err != nil {
@@ -76,8 +79,6 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect redis set method success", func(t *testing.T) {
-			expectedSipherKey := "key value"
-			redisURL := "localhost:6379"
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
@@ -108,7 +109,6 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect url not found error", func(t *testing.T) {
-			expectedSipherKey := "key value"
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 
@@ -128,7 +128,6 @@ func TestRoot_Server(t *testing.T) {
 	})
 	t.Run("get by key", func(t *testing.T) {
 		t.Run("get method success", func(t *testing.T) {
-			expectedSipherKey := "key value"
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 
@@ -164,8 +163,6 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect bad request status if set local method and try get by remote method", func(t *testing.T) {
-			expectedSipherKey := "key value"
-			redisURL := "localhost:6379"
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 
@@ -210,8 +207,6 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect bad request status if set remote method and try get by local method", func(t *testing.T) {
-			expectedSipherKey := "key value"
-			redisURL := "localhost:6379"
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 
@@ -255,8 +250,6 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect redis get method success", func(t *testing.T) {
-			expectedSipherKey := "key value"
-			redisURL := "localhost:6379"
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 
@@ -319,7 +312,6 @@ func TestRoot_Server(t *testing.T) {
 		})
 		t.Run("error when used wrong cipher key", func(t *testing.T) {
 			wrongSipherKey := "wrong key"
-			expectedSipherKey := "key value"
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 
@@ -360,7 +352,6 @@ func TestRoot_Server(t *testing.T) {
 
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
-			expectedSipherKey := "key value"
 
 			port := createAndExecuteCliCommand(ctx)
 
@@ -384,7 +375,6 @@ func TestRoot_Server(t *testing.T) {
 
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
-			expectedSipherKey := "key value"
 
 			port := createAndExecuteCliCommand(ctx)
 			defer func() {
@@ -416,7 +406,6 @@ func TestRoot_ServerPing(t *testing.T) {
 			require.EqualValues(t, route, r.URL.Path)
 		}))
 		defer s.Close()
-
 		// Parse server url for wright flags format
 		sURL, h, p := ParseURL(s.URL)
 
@@ -489,7 +478,6 @@ func ParseURL(s string) (*url.URL, string, string) {
 }
 
 func createAndExecuteCliCommand(ctx context.Context) (freePort string) {
-	path := "testFile.txt"
 	port, err := GetFreePort()
 	if err != nil {
 		fmt.Println(err)

@@ -126,10 +126,10 @@ func (r *root) setCmd() *cobra.Command {
 				}
 				ds = storage.NewRedisVault(rdb)
 			case postgresURL != "":
-				//err := migrateUp(postgresURL)
-				//if err != nil {
-				//	return fmt.Errorf("can't migrate db:  %w", err)
-				//}
+				err := migrateUp(postgresURL, migration)
+				if err != nil {
+					r.logger.Errorf("root: db already exist: %s", err)
+				}
 				pdb, err := sqlx.Connect("postgres", postgresURL)
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
@@ -186,13 +186,10 @@ func (r *root) getCmd() *cobra.Command {
 				}
 				ds = storage.NewRedisVault(rdb)
 			case postgresURL != "":
-				//err := migrateUp(postgresURL)
-				//if err != nil {
-				//	if err.Error() == "can't migrate db:  no change" {
-				//		//break
-				//	}
-				//	//return fmt.Errorf("can't migrate db:  %w", err)
-				//}
+				err := migrateUp(postgresURL, migration)
+				if err != nil {
+					r.logger.Errorf("root: db already exist: %s", err)
+				}
 				connStr := "user=postgres password=postgres  sslmode=disable"
 				pdb, err := sqlx.Connect("postgres", connStr)
 				if err != nil {
@@ -252,10 +249,10 @@ func (r *root) serverCmd() *cobra.Command {
 					return provider.NewProvider(cr, dataRedis), nil
 				}
 			case postgresURL != "":
-				//err := migrateUp(postgresURL)
-				//if err != nil {
-				//	return fmt.Errorf("can't migrate db:  %w", err)
-				//}
+				err := migrateUp(postgresURL, migration)
+				if err != nil {
+					r.logger.Errorf("root: db already exist: %s", err)
+				}
 				pdb, err := sqlx.Connect("postgres", postgresURL)
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
@@ -383,5 +380,3 @@ func migrateUp(postgres string, source string) error {
 	}
 	return nil
 }
-
-//TODO add migration flag with  /scriots/migrations

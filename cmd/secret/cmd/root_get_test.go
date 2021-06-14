@@ -12,9 +12,7 @@ import (
 )
 
 func TestRoot_Get(t *testing.T) {
-	key := "key-value"
 	value := "60OBdPOOkSOu6kn8ZuMuXtAPVrUEFkPREydDwY6+ip/LrAFaHSc="
-	path := "testFile.txt"
 	t.Run("success", func(t *testing.T) {
 		file, err := os.Create(path)
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -56,7 +54,6 @@ func TestRoot_Get(t *testing.T) {
 		require.EqualValues(t, value, got)
 	})
 	t.Run("success after get redis command", func(t *testing.T) {
-		redisURL := "localhost:6379"
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 
@@ -83,7 +80,7 @@ func TestRoot_Get(t *testing.T) {
 
 		r := New()
 
-		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL})
+		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", "file://../../../"})
 		executeErr := r.Execute(ctx)
 		require.NoError(t, executeErr)
 

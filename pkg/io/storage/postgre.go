@@ -38,11 +38,19 @@ func (r *postgreVault) SaveData(key, encodedValue []byte) error {
 	if bytes.Equal(encodedValue, []byte("")) {
 		_, err = tx.ExecContext(ctx, "DELETE FROM postgres WHERE key=$1", string(key))
 		if err != nil {
+			err = tx.Rollback()
+			if err != nil {
+				return fmt.Errorf("postgres: can't rollback %w", err)
+			}
 			return fmt.Errorf("postgres: can't delete data %w", err)
 		}
 	} else {
 		_, err = tx.ExecContext(ctx, "INSERT INTO postgres (key , value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2", string(key), hex.EncodeToString(encodedValue))
 		if err != nil {
+			err = tx.Rollback()
+			if err != nil {
+				return fmt.Errorf("postgres: can't rollback %w", err)
+			}
 			return fmt.Errorf("postgres: can't insert data %w", err)
 		}
 	}

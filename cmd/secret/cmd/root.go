@@ -116,7 +116,7 @@ func (r *root) setCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var ds secretApi.DataSaver
 			var cr = crypto.NewCryptographer([]byte(cipherKey))
-
+			logger := r.logger.Named("set cmd")
 			switch {
 			case redisURL != "":
 				rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
@@ -128,7 +128,7 @@ func (r *root) setCmd() *cobra.Command {
 			case postgresURL != "":
 				err := migrateUp(postgresURL, migration)
 				if err != nil {
-					r.logger.Errorf("root: db already exist: %s", err)
+					logger.Infof("can't migrate db:  %s", err)
 				}
 				pdb, err := sqlx.Connect("postgres", postgresURL)
 				if err != nil {
@@ -173,7 +173,7 @@ func (r *root) getCmd() *cobra.Command {
 		Short: "Get data from specified storage in decrypted form",
 		Long:  "it takes keys from user and get value in decrypted manner from specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
+			logger := r.logger.Named("get cmd")
 			var ds secretApi.DataSaver
 			var cr = crypto.NewCryptographer([]byte(cipherKey))
 
@@ -182,13 +182,13 @@ func (r *root) getCmd() *cobra.Command {
 				rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
 				err := rdb.Ping(r.cmd.Context()).Err()
 				if err != nil {
-					return fmt.Errorf("redis db is not reachable:  %w", err)
+					fmt.Println("can't migrate db:  %w", err)
 				}
 				ds = storage.NewRedisVault(rdb)
 			case postgresURL != "":
 				err := migrateUp(postgresURL, migration)
 				if err != nil {
-					r.logger.Errorf("root: db already exist: %s", err)
+					logger.Infof("root: db already exist: %s", err)
 				}
 				connStr := "user=postgres password=postgres  sslmode=disable"
 				pdb, err := sqlx.Connect("postgres", connStr)
@@ -251,7 +251,7 @@ func (r *root) serverCmd() *cobra.Command {
 			case postgresURL != "":
 				err := migrateUp(postgresURL, migration)
 				if err != nil {
-					r.logger.Errorf("root: db already exist: %s", err)
+					fmt.Println(fmt.Errorf("can't migrate db:  %w", err))
 				}
 				pdb, err := sqlx.Connect("postgres", postgresURL)
 				if err != nil {

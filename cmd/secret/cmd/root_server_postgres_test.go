@@ -30,7 +30,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			port, err := GetFreePort()
 			require.NoError(t, err)
 			r := New()
-			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--postgres-url", postgresURL, "--migration", "file://../../../"})
+			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--postgres-url", postgresURL, "--migration", migration})
 			go func() {
 				err := r.Execute(ctx)
 				if err != nil {
@@ -67,7 +67,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			port, err := GetFreePort()
 			require.NoError(t, err)
 			r := New()
-			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--postgres-url", postgresURL, "--migration", "file://../../../"})
+			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--postgres-url", postgresURL, "--migration", migration})
 			go func() {
 				err := r.Execute(ctx)
 				if err != nil {
@@ -98,12 +98,10 @@ func TestRoot_Server_Postgres(t *testing.T) {
 
 			resp, err = client.Do(req)
 			require.NoError(t, err)
-			_, err = ioutil.ReadAll(resp.Body)
-			require.NoError(t, err)
 			require.EqualValues(t, http.StatusOK, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
 		})
-		t.Run("expect bad request status if set postgres redis method and try get by local method", func(t *testing.T) {
+		t.Run("expect bad request status if set postgres remote method and try get by local method", func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 			defer func() {
@@ -115,7 +113,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			port, err := GetFreePort()
 			require.NoError(t, err)
 			r := New()
-			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--postgres-url", postgresURL, "--migration", "file://../../../"})
+			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--postgres-url", postgresURL, "--migration", migration})
 			go func() {
 				err := r.Execute(ctx)
 				if err != nil {
@@ -151,7 +149,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			require.Contains(t, string(data), "cannot get data by key")
 			require.NoError(t, resp.Body.Close())
 		})
-		t.Run("expect bad request status if set local method and try get by remote postgres method", func(t *testing.T) {
+		t.Run("expect status 500 if set local method and try get by remote postgres method", func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 			defer func() {
@@ -163,7 +161,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			port, err := GetFreePort()
 			require.NoError(t, err)
 			r := New()
-			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--postgres-url", postgresURL, "--migration", "file://../../../"})
+			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--postgres-url", postgresURL, "--migration", migration})
 			go func() {
 				err := r.Execute(ctx)
 				if err != nil {
@@ -195,9 +193,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 
 			resp, err = client.Do(req)
 			require.NoError(t, err)
-			data, err := ioutil.ReadAll(resp.Body)
-			require.NoError(t, err)
-			require.Contains(t, string(data), "")
+			require.EqualValues(t, http.StatusInternalServerError, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
 		})
 	})

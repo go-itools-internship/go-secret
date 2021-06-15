@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -13,8 +14,9 @@ import (
 func TestRedisVault_SaveData(t *testing.T) {
 	key := "key"
 	encodedValue := "value"
-	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "", DB: 0})
 	t.Run("success", func(t *testing.T) {
+		rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "", DB: 0})
+		defer disconnectRDB(rdb)
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		s := NewRedisVault(rdb)
@@ -26,6 +28,8 @@ func TestRedisVault_SaveData(t *testing.T) {
 		require.EqualValues(t, encodedValue, val)
 	})
 	t.Run("error if key equals nil", func(t *testing.T) {
+		rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "", DB: 0})
+		defer disconnectRDB(rdb)
 		key := ""
 		s := NewRedisVault(rdb)
 		err := s.SaveData([]byte(key), []byte(encodedValue))
@@ -33,6 +37,8 @@ func TestRedisVault_SaveData(t *testing.T) {
 		require.EqualValues(t, "storage: key can't be nil ", err.Error())
 	})
 	t.Run("get nil value if key has been deleted", func(t *testing.T) {
+		rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "", DB: 0})
+		defer disconnectRDB(rdb)
 		nilEncodedValue := ""
 		s := NewRedisVault(rdb)
 		err := s.SaveData([]byte(key), []byte(key))
@@ -49,8 +55,9 @@ func TestRedisVault_SaveData(t *testing.T) {
 func TestRedisVault_ReadData(t *testing.T) {
 	key := "key"
 	encodedValue := "value"
-	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "", DB: 0})
 	t.Run("success", func(t *testing.T) {
+		rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "", DB: 0})
+		defer disconnectRDB(rdb)
 		s := NewRedisVault(rdb)
 		err := s.SaveData([]byte(key), []byte(encodedValue))
 		require.NoError(t, err)
@@ -59,10 +66,19 @@ func TestRedisVault_ReadData(t *testing.T) {
 		require.EqualValues(t, "value", val)
 	})
 	t.Run("get nil value if wrong key", func(t *testing.T) {
+		rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "", DB: 0})
+		defer disconnectRDB(rdb)
 		wrongKey := "wrongKey"
 		s := NewRedisVault(rdb)
 		val, err := s.ReadData([]byte(wrongKey))
 		require.NoError(t, err)
 		require.EqualValues(t, []byte(nil), val)
 	})
+}
+
+func disconnectRDB(rdb *redis.Client) {
+	err := rdb.Close()
+	if err != nil {
+		fmt.Println("can't disconnect redis db")
+	}
 }

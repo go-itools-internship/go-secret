@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -76,17 +77,22 @@ func TestRoot_Get(t *testing.T) {
 	t.Run("success after get postgres command", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		defer migrateDown()
+		defer func() {
+			err := migrateDown()
+			if err != nil {
+				fmt.Println("can't migrate down", err)
+			}
+		}()
 		r := New()
 
-		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", "file://../../../"})
+		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", migration})
 		executeErr := r.Execute(ctx)
 		require.NoError(t, executeErr)
 
 		var b bytes.Buffer
 		r.cmd.SetOut(&b)
 
-		r.cmd.SetArgs([]string{"get", "--key", key, "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", "file://../../../"})
+		r.cmd.SetArgs([]string{"get", "--key", key, "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", migration})
 		err := r.Execute(ctx)
 		require.NoError(t, err)
 		out := b.String()

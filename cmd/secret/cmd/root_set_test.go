@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -69,9 +70,14 @@ func TestRoot_Set(t *testing.T) {
 		path := ""
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
-		defer migrateDown()
+		defer func() {
+			err := migrateDown()
+			if err != nil {
+				fmt.Println("can't migrate down ", err)
+			}
+		}()
 		r := New()
-		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", "file://../../../"})
+		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", migration})
 		err := r.Execute(ctx)
 		require.NoError(t, err)
 

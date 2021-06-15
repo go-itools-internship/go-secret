@@ -15,7 +15,6 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	_ "github.com/golang-migrate/migrate/v4/source/github"
 
 	"github.com/jmoiron/sqlx"
 
@@ -117,10 +116,11 @@ func (r *root) setCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var ds secretApi.DataSaver
 			var cr = crypto.NewCryptographer([]byte(cipherKey))
-			logger := r.logger.Named("set cmd")
+			logger := r.logger.Named("set-cmd")
 			switch {
 			case redisURL != "":
 				rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
+				defer disconnectRDB(rdb)
 				err := rdb.Ping(r.cmd.Context()).Err()
 				if err != nil {
 					return fmt.Errorf("redis db is not reachable:  %w", err)
@@ -136,6 +136,7 @@ func (r *root) setCmd() *cobra.Command {
 					}
 				}
 				pdb, err := sqlx.ConnectContext(r.cmd.Context(), "postgres", postgresURL)
+				defer disconnectPDB(pdb)
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
@@ -161,8 +162,8 @@ func (r *root) setCmd() *cobra.Command {
 	setCmd.Flags().StringVarP(&cipherKey, "cipher-key", "c", cipherKey, "cipher key for data encryption and decryption")
 	setCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
 	setCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
-	setCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: localhost:5432")
-	setCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up route to scripts/migrations folder. Example: file://../../")
+	setCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable")
+	setCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up route to scripts/migrations folder. Example: file://../../../scripts/migrations")
 
 	return setCmd
 }
@@ -179,13 +180,14 @@ func (r *root) getCmd() *cobra.Command {
 		Short: "Get data from specified storage in decrypted form",
 		Long:  "it takes keys from user and get value in decrypted manner from specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			logger := r.logger.Named("get cmd")
+			logger := r.logger.Named("get-cmd")
 			var ds secretApi.DataSaver
 			var cr = crypto.NewCryptographer([]byte(cipherKey))
 
 			switch {
 			case redisURL != "":
 				rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
+				defer disconnectRDB(rdb)
 				err := rdb.Ping(r.cmd.Context()).Err()
 				if err != nil {
 					return fmt.Errorf("redis db is not reachable:  %w", err)
@@ -201,6 +203,7 @@ func (r *root) getCmd() *cobra.Command {
 					}
 				}
 				pdb, err := sqlx.ConnectContext(r.cmd.Context(), "postgres", postgresURL)
+				defer disconnectPDB(pdb)
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
@@ -226,8 +229,8 @@ func (r *root) getCmd() *cobra.Command {
 	getCmd.Flags().StringVarP(&cipherKey, "cipher-key", "c", cipherKey, "cipher key for data encryption and decryption")
 	getCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the value will be got")
 	getCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
-	getCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: localhost:5432")
-	getCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up route to scripts/migrations folder. Example: file://../../")
+	getCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable")
+	getCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up route to scripts/migrations folder. Example: file://../../../scripts/migrations")
 
 	return getCmd
 }
@@ -248,6 +251,7 @@ func (r *root) serverCmd() *cobra.Command {
 			switch {
 			case redisURL != "":
 				rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
+				defer disconnectRDB(rdb)
 				err := rdb.Ping(r.cmd.Context()).Err()
 				if err != nil {
 					return fmt.Errorf("redis db is not reachable:  %w", err)
@@ -272,6 +276,7 @@ func (r *root) serverCmd() *cobra.Command {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
 				dataPostgres := storage.NewPostgreVault(pdb)
+				defer disconnectPDB(pdb)
 				// remote method set handler for postgres storage
 				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
 					cr := crypto.NewCryptographer([]byte(cipher))
@@ -337,7 +342,7 @@ func (r *root) serverCmd() *cobra.Command {
 	serverCmd.Flags().StringVarP(&port, "port", "t", "8888", "localhost address")
 	serverCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
 	serverCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable\"")
-	serverCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up route to scripts/migrations folder. Example: file://../../")
+	serverCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up route to scripts/migrations folder. Example: file://../../../scripts/migrations")
 	serverCmd.AddCommand(r.serverPingCmd())
 	return serverCmd
 }
@@ -383,7 +388,7 @@ func (r *root) serverPingCmd() *cobra.Command {
 
 func migrateUp(postgres, source string) error {
 	m, err := migrate.New(
-		fmt.Sprintf("%sscripts/migrations", source),
+		source,
 		postgres)
 	if err != nil {
 		return err
@@ -393,4 +398,18 @@ func migrateUp(postgres, source string) error {
 		return err
 	}
 	return nil
+}
+
+func disconnectPDB(pdb *sqlx.DB) {
+	err := pdb.Close()
+	if err != nil {
+		fmt.Println("can't disconnect postgres db")
+	}
+}
+
+func disconnectRDB(rdb *redis.Client) {
+	err := rdb.Close()
+	if err != nil {
+		fmt.Println("can't disconnect redis db")
+	}
 }

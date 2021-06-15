@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -89,9 +90,11 @@ func TestRoot_Server_Redis(t *testing.T) {
 
 			resp, err = client.Do(req)
 			require.NoError(t, err)
-			data, err := ioutil.ReadAll(resp.Body)
-			require.NoError(t, err)
-			require.Contains(t, string(data), "test-value-1")
+			var requestBody struct {
+				Value string `json:"value"`
+			}
+			require.NoError(t, json.NewDecoder(resp.Body).Decode(&requestBody))
+			require.EqualValues(t, "test-value-1", requestBody.Value)
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect bad request status if set remote redis method and try get by local method", func(t *testing.T) {

@@ -26,6 +26,7 @@ const (
 	expectedSipherKey = "key value"
 	redisURL          = "localhost:6379"
 	postgresURL       = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+	migration         = "file://../../../scripts/migrations"
 )
 
 func TestRoot_Server(t *testing.T) {

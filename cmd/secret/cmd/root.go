@@ -162,7 +162,7 @@ func (r *root) setCmd() *cobra.Command {
 	setCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
 	setCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
 	setCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: localhost:5432")
-	setCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up  route to scripts/migrations folder. Example: file://../../")
+	setCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up route to scripts/migrations folder. Example: file://../../")
 
 	return setCmd
 }
@@ -227,7 +227,7 @@ func (r *root) getCmd() *cobra.Command {
 	getCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the value will be got")
 	getCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
 	getCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: localhost:5432")
-	getCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up  route to scripts/migrations folder. Example: file://../../")
+	getCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up route to scripts/migrations folder. Example: file://../../")
 
 	return getCmd
 }
@@ -272,7 +272,7 @@ func (r *root) serverCmd() *cobra.Command {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
 				dataPostgres := storage.NewPostgreVault(pdb)
-				// remote method set handler for redis storage
+				// remote method set handler for postgres storage
 				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
 					cr := crypto.NewCryptographer([]byte(cipher))
 					return provider.NewProvider(cr, dataPostgres), nil
@@ -337,7 +337,7 @@ func (r *root) serverCmd() *cobra.Command {
 	serverCmd.Flags().StringVarP(&port, "port", "t", "8888", "localhost address")
 	serverCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
 	serverCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable\"")
-	serverCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up  route to scripts/migrations folder. Example: file://../../")
+	serverCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up route to scripts/migrations folder. Example: file://../../")
 	serverCmd.AddCommand(r.serverPingCmd())
 	return serverCmd
 }

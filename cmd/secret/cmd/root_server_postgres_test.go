@@ -50,7 +50,9 @@ func TestRoot_Server_Postgres(t *testing.T) {
 
 			resp, err := client.Do(req)
 			require.NoError(t, err)
-			require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
+			respBody, err := ioutil.ReadAll(resp.Body)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusNoContent, resp.StatusCode, string(respBody))
 			require.NoError(t, resp.Body.Close())
 		})
 	})
@@ -98,7 +100,9 @@ func TestRoot_Server_Postgres(t *testing.T) {
 
 			resp, err = client.Do(req)
 			require.NoError(t, err)
-			require.EqualValues(t, http.StatusOK, resp.StatusCode)
+			respBody, err := ioutil.ReadAll(resp.Body)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusOK, resp.StatusCode, string(respBody))
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect bad request status if set postgres remote method and try get by local method", func(t *testing.T) {

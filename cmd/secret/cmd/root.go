@@ -272,11 +272,11 @@ func (r *root) serverCmd() *cobra.Command {
 					}
 				}
 				pdb, err := sqlx.ConnectContext(r.cmd.Context(), "postgres", postgresURL)
+				defer disconnectPDB(pdb)
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
 				dataPostgres := storage.NewPostgreVault(pdb)
-				defer disconnectPDB(pdb)
 				// remote method set handler for postgres storage
 				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
 					cr := crypto.NewCryptographer([]byte(cipher))

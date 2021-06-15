@@ -326,7 +326,7 @@ func GetFreePort() (int, error) {
 
 func migrateDown() error {
 	m, err := migrate.New(
-		"file://../../../scripts/migrations",
+		migration,
 		postgresURL)
 	if err != nil {
 		fmt.Println(err)

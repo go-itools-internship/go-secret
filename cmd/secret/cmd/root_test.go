@@ -323,15 +323,16 @@ func GetFreePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
-func migrateDown() {
-	mdown, err := migrate.New(
+func migrateDown() error {
+	m, err := migrate.New(
 		"file://../../../scripts/migrations",
 		postgresURL)
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = mdown.Down()
+	err = m.Down()
 	if err != nil {
 		fmt.Println(err)
 	}
+	return err
 }

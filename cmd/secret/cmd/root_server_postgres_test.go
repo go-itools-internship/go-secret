@@ -21,7 +21,12 @@ func TestRoot_Server_Postgres(t *testing.T) {
 		t.Run("expect postgres set method success", func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancel()
-			defer migrateDown()
+			defer func() {
+				err := migrateDown()
+				if err != nil {
+					fmt.Println("Can't migrate down", err)
+				}
+			}()
 			port, err := GetFreePort()
 			require.NoError(t, err)
 			r := New()
@@ -53,7 +58,12 @@ func TestRoot_Server_Postgres(t *testing.T) {
 		t.Run("expect postgres get method success", func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancel()
-			defer migrateDown()
+			defer func() {
+				err := migrateDown()
+				if err != nil {
+					fmt.Println("Can't migrate down", err)
+				}
+			}()
 			port, err := GetFreePort()
 			require.NoError(t, err)
 			r := New()
@@ -100,7 +110,12 @@ func TestRoot_Server_Postgres(t *testing.T) {
 		t.Run("expect bad request status if set postgres redis method and try get by local method", func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
-			defer migrateDown()
+			defer func() {
+				err := migrateDown()
+				if err != nil {
+					fmt.Println("Can't migrate down", err)
+				}
+			}()
 			port, err := GetFreePort()
 			require.NoError(t, err)
 			r := New()

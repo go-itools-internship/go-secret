@@ -77,6 +77,9 @@ func TestRoot_Server(t *testing.T) {
 
 			resp, err := client.Do(req)
 			require.NoError(t, err)
+			data, err := ioutil.ReadAll(resp.Body)
+			require.NoError(t, err)
+			fmt.Println(string(data), resp.Header)
 			require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
 		})

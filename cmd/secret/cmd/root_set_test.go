@@ -17,7 +17,7 @@ import (
 
 func TestRoot_Set(t *testing.T) {
 	t.Run("expect one keys", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		r := New()
@@ -48,7 +48,7 @@ func TestRoot_Set(t *testing.T) {
 	t.Run("expect set data only redis storage", func(t *testing.T) {
 		key := "12345"
 		path := ""
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		r := New()
@@ -68,7 +68,7 @@ func TestRoot_Set(t *testing.T) {
 	t.Run("expect set data only postgres storage", func(t *testing.T) {
 		key := "12345"
 		path := ""
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		defer func() {
 			err := migrateDown()
@@ -97,7 +97,7 @@ func TestRoot_Set(t *testing.T) {
 	t.Run("expect two keys", func(t *testing.T) {
 		firstKey := "first key"
 		secondKey := "second key"
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		r := New()

@@ -32,7 +32,7 @@ const (
 func TestRoot_Server(t *testing.T) {
 	t.Run("set by key", func(t *testing.T) {
 		t.Run("expect set method success", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			// get free port after cli creating
 			port := createAndExecuteCliCommand(ctx)
@@ -71,7 +71,7 @@ func TestRoot_Server(t *testing.T) {
 	})
 	t.Run("get by key", func(t *testing.T) {
 		t.Run("get method success", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			port := createAndExecuteCliCommand(ctx)
@@ -106,7 +106,7 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("middleware check success", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			port := createAndExecuteCliCommand(ctx)
@@ -123,7 +123,7 @@ func TestRoot_Server(t *testing.T) {
 		})
 		t.Run("error when used wrong cipher key", func(t *testing.T) {
 			wrongSipherKey := "wrong key"
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			port := createAndExecuteCliCommand(ctx)
@@ -161,7 +161,7 @@ func TestRoot_Server(t *testing.T) {
 			invalidKey := "invalid-key"
 			require.NotEqual(t, key, invalidKey)
 
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			port := createAndExecuteCliCommand(ctx)
@@ -184,7 +184,7 @@ func TestRoot_Server(t *testing.T) {
 			invalidKey := "invalid-key"
 			require.NotEqual(t, key, invalidKey)
 
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			port := createAndExecuteCliCommand(ctx)

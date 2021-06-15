@@ -17,7 +17,7 @@ func TestRoot_Get(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		file, err := os.Create(path)
 		require.NoError(t, err)
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		defer func() {
@@ -55,7 +55,7 @@ func TestRoot_Get(t *testing.T) {
 		require.EqualValues(t, value, got)
 	})
 	t.Run("success after get redis command", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		r := New()
@@ -75,7 +75,7 @@ func TestRoot_Get(t *testing.T) {
 		require.EqualValues(t, "test value\n", out)
 	})
 	t.Run("success after get postgres command", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		defer func() {
 			err := migrateDown()

@@ -56,7 +56,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 	})
 	t.Run("get by key", func(t *testing.T) {
 		t.Run("expect postgres get method success", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 			defer func() {
 				err := migrateDown()
@@ -80,16 +80,12 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			}()
 
 			client := http.Client{Timeout: time.Second}
-			body := bytes.NewBufferString(`{"getter":"key-value","method":"remote","value":"test-value"}`)
+			body := bytes.NewBufferString(`{"getter":"key-value","method":"remote","value":"test-value-1"}`)
 			req := httptest.NewRequest(http.MethodPost, "http://localhost:"+strconv.Itoa(port), body)
 			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
 			req.RequestURI = ""
-
 			resp, err := client.Do(req)
 			require.NoError(t, err)
-			data, err := ioutil.ReadAll(resp.Body)
-			fmt.Println(string(data), resp.Header)
-			require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
 
 			req = httptest.NewRequest(http.MethodGet, "http://localhost:"+strconv.Itoa(port), nil)

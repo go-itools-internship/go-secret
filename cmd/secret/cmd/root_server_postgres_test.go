@@ -45,6 +45,8 @@ func TestRoot_Server_Postgres(t *testing.T) {
 
 			resp, err := client.Do(req)
 			require.NoError(t, err)
+			data, err := ioutil.ReadAll(resp.Body)
+			fmt.Println(string(data))
 			require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
 		})

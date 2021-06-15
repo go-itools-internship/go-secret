@@ -85,6 +85,7 @@ func TestRoot_Set(t *testing.T) {
 		require.Error(t, err)
 
 		db, err := sqlx.ConnectContext(ctx, "postgres", postgresURL)
+		defer disconnectPDB(db)
 		require.NoError(t, err)
 
 		d := storage.NewPostgreVault(db)

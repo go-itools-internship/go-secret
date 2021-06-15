@@ -88,6 +88,9 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			req.RequestURI = ""
 			resp, err := client.Do(req)
 			require.NoError(t, err)
+			respBody, err := ioutil.ReadAll(resp.Body)
+			require.NoError(t, err)
+			require.EqualValues(t, http.StatusNoContent, resp.StatusCode, string(respBody))
 			require.NoError(t, resp.Body.Close())
 
 			req = httptest.NewRequest(http.MethodGet, "http://localhost:"+strconv.Itoa(port), nil)
@@ -100,7 +103,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 
 			resp, err = client.Do(req)
 			require.NoError(t, err)
-			respBody, err := ioutil.ReadAll(resp.Body)
+			respBody, err = ioutil.ReadAll(resp.Body)
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusOK, resp.StatusCode, string(respBody))
 			require.NoError(t, resp.Body.Close())

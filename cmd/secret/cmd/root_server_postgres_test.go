@@ -19,12 +19,12 @@ import (
 func TestRoot_Server_Postgres(t *testing.T) {
 	t.Run("set by key", func(t *testing.T) {
 		t.Run("expect postgres set method success", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 			defer func() {
 				err := migrateDown()
 				if err != nil {
-					fmt.Println("Can't migrate down", err)
+					fmt.Println("can't migrate down", err)
 				}
 			}()
 			port, err := GetFreePort()
@@ -43,7 +43,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			}()
 
 			client := http.Client{Timeout: time.Second}
-			body := bytes.NewBufferString(`{"getter":"key-value","method":"remote","value":"test-value"}`)
+			body := bytes.NewBufferString(`{"getter":"key-value","method":"remote","value":"test-value-1"}`)
 			req := httptest.NewRequest(http.MethodPost, "http://localhost:"+strconv.Itoa(port), body)
 			req.Header.Set(api.ParamCipherKey, expectedSipherKey)
 			req.RequestURI = ""
@@ -61,7 +61,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			defer func() {
 				err := migrateDown()
 				if err != nil {
-					fmt.Println("Can't migrate down", err)
+					fmt.Println("can't migrate down", err)
 				}
 			}()
 			port, err := GetFreePort()
@@ -109,7 +109,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			defer func() {
 				err := migrateDown()
 				if err != nil {
-					fmt.Println("Can't migrate down", err)
+					fmt.Println("can't migrate down", err)
 				}
 			}()
 			port, err := GetFreePort()
@@ -154,7 +154,12 @@ func TestRoot_Server_Postgres(t *testing.T) {
 		t.Run("expect bad request status if set local method and try get by remote postgres method", func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
-			defer migrateDown()
+			defer func() {
+				err := migrateDown()
+				if err != nil {
+					fmt.Println("can't migrate down", err)
+				}
+			}()
 			port, err := GetFreePort()
 			require.NoError(t, err)
 			r := New()

@@ -56,7 +56,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 	})
 	t.Run("get by key", func(t *testing.T) {
 		t.Run("expect postgres get method success", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			defer func() {
 				err := migrateDown()

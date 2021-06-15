@@ -109,7 +109,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect bad request status if set postgres remote method and try get by local method", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 			defer func() {
 				err := migrateDown()
@@ -157,7 +157,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect status 500 if set local method and try get by remote postgres method", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 			defer func() {
 				err := migrateDown()

@@ -20,7 +20,7 @@ import (
 func TestRoot_Server_Redis(t *testing.T) {
 	t.Run("set by key", func(t *testing.T) {
 		t.Run("expect redis set method success", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 
 			port, err := GetFreePort()
@@ -52,7 +52,7 @@ func TestRoot_Server_Redis(t *testing.T) {
 	})
 	t.Run("get by key", func(t *testing.T) {
 		t.Run("expect bad request status if set local method and try get by remote redis method", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 
 			port, err := GetFreePort()
@@ -98,7 +98,7 @@ func TestRoot_Server_Redis(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect bad request status if set remote redis method and try get by local method", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 
 			port, err := GetFreePort()
@@ -141,7 +141,7 @@ func TestRoot_Server_Redis(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect redis get method success", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 
 			port, err := GetFreePort()

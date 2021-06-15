@@ -32,7 +32,7 @@ const (
 func TestRoot_Server(t *testing.T) {
 	t.Run("set by key", func(t *testing.T) {
 		t.Run("expect set method success", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 			// get free port after cli creating
 			port := createAndExecuteCliCommand(ctx)
@@ -52,7 +52,7 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("expect url not found error", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 
 			port := createAndExecuteCliCommand(ctx)
@@ -71,7 +71,7 @@ func TestRoot_Server(t *testing.T) {
 	})
 	t.Run("get by key", func(t *testing.T) {
 		t.Run("get method success", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 
 			port := createAndExecuteCliCommand(ctx)
@@ -106,7 +106,7 @@ func TestRoot_Server(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 		})
 		t.Run("middleware check success", func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 
 			port := createAndExecuteCliCommand(ctx)
@@ -123,7 +123,7 @@ func TestRoot_Server(t *testing.T) {
 		})
 		t.Run("error when used wrong cipher key", func(t *testing.T) {
 			wrongSipherKey := "wrong key"
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 
 			port := createAndExecuteCliCommand(ctx)
@@ -161,7 +161,7 @@ func TestRoot_Server(t *testing.T) {
 			invalidKey := "invalid-key"
 			require.NotEqual(t, key, invalidKey)
 
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 
 			port := createAndExecuteCliCommand(ctx)
@@ -184,7 +184,7 @@ func TestRoot_Server(t *testing.T) {
 			invalidKey := "invalid-key"
 			require.NotEqual(t, key, invalidKey)
 
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 
 			port := createAndExecuteCliCommand(ctx)
@@ -220,7 +220,7 @@ func TestRoot_ServerPing(t *testing.T) {
 		// Parse server url for wright flags format
 		sURL, h, p := ParseURL(s.URL)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 		r := New()
 		r.cmd.SetArgs([]string{"server", "ping", "--url", fmt.Sprintf("%s://%s", sURL.Scheme, h), "--port", p, "--route", route})
@@ -236,7 +236,7 @@ func TestRoot_ServerPing(t *testing.T) {
 		// Parse server url for wright flags format
 		sURL, h, p := ParseURL(s.URL)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 		r := New()
 		r.cmd.SetArgs([]string{"server", "ping", "--url", fmt.Sprintf("%s://%s", sURL.Scheme, h), "--port", p, "--route", route})
@@ -247,7 +247,7 @@ func TestRoot_ServerPing(t *testing.T) {
 	t.Run("error when server connection refused", func(t *testing.T) {
 		testURL := "http://localhost"
 		port := "8880"
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 		r := New()
 		r.cmd.SetArgs([]string{"server", "ping", "--url", testURL, "--port", port, "--route", route})

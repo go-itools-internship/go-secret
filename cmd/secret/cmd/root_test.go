@@ -335,5 +335,6 @@ func migrateDown() error {
 	if err != nil {
 		return err
 	}
-	return err
+	fmt.Println("root-test: migrate down")
+	return nil
 }

@@ -400,6 +400,7 @@ func migrateUp(postgres, source string) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("root: migrate up")
 	return nil
 }
 

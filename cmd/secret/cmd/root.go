@@ -203,10 +203,10 @@ func (r *root) getCmd() *cobra.Command {
 					}
 				}
 				pdb, err := sqlx.ConnectContext(r.cmd.Context(), "postgres", postgresURL)
-				defer disconnectPDB(pdb)
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
+				defer disconnectPDB(pdb)
 				ds = storage.NewPostgreVault(pdb)
 			case path != "":
 				var err error
@@ -272,10 +272,11 @@ func (r *root) serverCmd() *cobra.Command {
 					}
 				}
 				pdb, err := sqlx.ConnectContext(r.cmd.Context(), "postgres", postgresURL)
-				defer disconnectPDB(pdb)
+				r.logger.Infof("pdb after connection %v", pdb)
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
+				defer disconnectPDB(pdb)
 				dataPostgres := storage.NewPostgreVault(pdb)
 				// remote method set handler for postgres storage
 				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
@@ -297,12 +298,14 @@ func (r *root) serverCmd() *cobra.Command {
 			handler := api.NewMethods(store, logger.Named("handler"))
 			router := chi.NewRouter()
 			srv := &http.Server{Addr: ":" + port, Handler: router}
+			r.logger.Infof("server-info %v %v %v", srv.ErrorLog, srv.WriteTimeout, srv)
 
 			router.Use(middleware.Heartbeat("/ping"), middleware.RequestLogger(&middleware.DefaultLogFormatter{
 				Logger: &chiLogger{logger.Named("api")},
 			}))
 			router.Get("/", handler.GetByKey)
 			router.Post("/", handler.SetByKey)
+			r.logger.Infof("router %v", router)
 
 			done := make(chan os.Signal, 1)
 			shutdownCh := make(chan struct{})
@@ -310,7 +313,7 @@ func (r *root) serverCmd() *cobra.Command {
 
 			go func() {
 				err := srv.ListenAndServe()
-				if err != nil {
+				if err != nil && !errors.Is(err, http.ErrServerClosed) {
 					logger.Errorf("connection error: %s", err)
 				}
 			}()
@@ -326,6 +329,7 @@ func (r *root) serverCmd() *cobra.Command {
 			go func(ctx context.Context) {
 				defer close(shutdownCh)
 				ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				r.logger.Infof("ctx-shutdown pdb after connection %v", ctx)
 				defer cancel()
 				err := srv.Shutdown(ctx)
 				if err != nil {

@@ -25,8 +25,8 @@ func TestPostgreVault_SaveData(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
-		defer disconnectPDB(db)
 		require.NoError(t, err)
+		defer disconnectPDB(db)
 
 		migrateUp()
 		defer migrateDown()
@@ -42,8 +42,8 @@ func TestPostgreVault_SaveData(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
-		defer disconnectPDB(db)
 		require.NoError(t, err)
+		defer disconnectPDB(db)
 
 		migrateUp()
 		defer migrateDown()
@@ -66,8 +66,8 @@ func TestPostgreVault_SaveData(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
-		defer disconnectPDB(db)
 		require.NoError(t, err)
+		defer disconnectPDB(db)
 
 		migrateUp()
 		defer migrateDown()
@@ -91,8 +91,8 @@ func TestPostgreVault_SaveData(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
-		defer disconnectPDB(db)
 		require.NoError(t, err)
+		defer disconnectPDB(db)
 
 		migrateUp()
 		defer migrateDown()

@@ -329,11 +329,11 @@ func migrateDown() error {
 		migration,
 		postgresURL)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 	err = m.Down()
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 	return err
 }

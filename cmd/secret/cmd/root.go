@@ -409,6 +409,7 @@ func disconnectPDB(pdb *sqlx.DB) {
 	if err != nil {
 		fmt.Println("can't disconnect postgres db")
 	}
+	fmt.Println("root: rdb disconnect")
 }
 
 func disconnectRDB(rdb *redis.Client) {

@@ -22,6 +22,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 			defer func() {
+				fmt.Println("postgres test: try migrate down")
 				err := migrateDown()
 				if err != nil {
 					fmt.Println("can't migrate down", err)
@@ -61,6 +62,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 			defer func() {
+				fmt.Println("postgres test: try migrate down")
 				err := migrateDown()
 				if err != nil {
 					fmt.Println("can't migrate down", err)
@@ -112,6 +114,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 			defer func() {
+				fmt.Println("postgres test: try migrate down")
 				err := migrateDown()
 				if err != nil {
 					fmt.Println("can't migrate down", err)
@@ -160,6 +163,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 			defer func() {
+				fmt.Println("postgres test: try migrate down")
 				err := migrateDown()
 				if err != nil {
 					fmt.Println("can't migrate down", err)

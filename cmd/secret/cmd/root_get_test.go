@@ -78,13 +78,14 @@ func TestRoot_Get(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 		defer func() {
+			fmt.Println("postgres test: try migrate down")
 			err := migrateDown()
 			if err != nil {
 				fmt.Println("can't migrate down", err)
 			}
 		}()
-		r := New()
 
+		r := New()
 		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", migration})
 		executeErr := r.Execute(ctx)
 		require.NoError(t, executeErr)

@@ -136,10 +136,10 @@ func (r *root) setCmd() *cobra.Command {
 					}
 				}
 				pdb, err := sqlx.ConnectContext(r.cmd.Context(), "postgres", postgresURL)
-				defer disconnectPDB(pdb)
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
+				defer disconnectPDB(pdb)
 				ds = storage.NewPostgreVault(pdb)
 			case path != "":
 				var err error

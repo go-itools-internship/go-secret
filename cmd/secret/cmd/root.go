@@ -390,6 +390,7 @@ func (r *root) serverPingCmd() *cobra.Command {
 }
 
 func migrateUp(postgres, source string) error {
+	fmt.Println("root: starting migrate up")
 	m, err := migrate.New(
 		source,
 		postgres)

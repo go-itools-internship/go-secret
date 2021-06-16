@@ -47,13 +47,13 @@ func (r *postgreVault) SaveData(key, encodedValue []byte) error {
 			return fmt.Errorf("postgres: can't delete data %w", err)
 		}
 	} else {
-		err := r.db.Ping()
+		pErr := r.db.Ping()
 		fmt.Println("try ping db")
-		if err != nil {
-			fmt.Println("ping", err)
+		if pErr != nil {
+			fmt.Println("ping", pErr)
 		}
-		data, err := tx.ExecContext(ctx, "INSERT INTO postgres (key , value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2;", string(key), hex.EncodeToString(encodedValue))
-		fmt.Println("try insert", data)
+		_, err = tx.ExecContext(ctx, "INSERT INTO postgres (key , value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2;", string(key), hex.EncodeToString(encodedValue))
+		fmt.Println("try insert")
 		if err != nil {
 			rErr := tx.Rollback()
 			if rErr != nil {

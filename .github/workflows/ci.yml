@@ -49,8 +49,13 @@ jobs:
 
     - name: build and test
       run: |
-        go test -v -race -timeout=100s -covermode=count -coverprofile=$GITHUB_WORKSPACE/profile.cov_tmp ./...
+        go test -v -timeout=100s -covermode=count -coverprofile=$GITHUB_WORKSPACE/profile.cov_tmp ./...
         cat $GITHUB_WORKSPACE/profile.cov_tmp | grep -v "mocks" | grep -v "_mock" > $GITHUB_WORKSPACE/profile.cov
+      env:
+        GOFLAGS: "-mod=vendor"
+
+    - name: test race
+      run: go test -v -race -timeout=100s ./... -count=1
       env:
         GOFLAGS: "-mod=vendor"
       

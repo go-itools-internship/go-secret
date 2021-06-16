@@ -324,18 +324,19 @@ func GetFreePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
-func migrateDown() error {
-	fmt.Println("root-test: start migrate down")
+func migrateDown(t *testing.T) error {
+	t.Log("root-test: start migrate down")
 	m, err := migrate.New(
 		migration,
 		postgresURL)
 	if err != nil {
 		return err
 	}
+	t.Log("root-test: migrate created")
 	err = m.Down()
 	if err != nil {
 		return err
 	}
-	fmt.Println("root-test: migrate down")
+	t.Log("root-test: migrate down")
 	return nil
 }

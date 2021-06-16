@@ -117,17 +117,18 @@ func (r *root) setCmd() *cobra.Command {
 			var ds secretApi.DataSaver
 			var cr = crypto.NewCryptographer([]byte(cipherKey))
 			logger := r.logger.Named("set-cmd")
+			logger.Info("Start")
 			switch {
 			case redisURL != "":
 				rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
-				defer disconnectRDB(rdb)
+				defer disconnectRDB(rdb, logger)
 				err := rdb.Ping(r.cmd.Context()).Err()
 				if err != nil {
 					return fmt.Errorf("redis db is not reachable:  %w", err)
 				}
 				ds = storage.NewRedisVault(rdb)
 			case postgresURL != "":
-				err := migrateUp(postgresURL, migration)
+				err := migrateUp(postgresURL, migration, logger)
 				if err != nil {
 					if errors.Is(err, migrate.ErrNoChange) {
 						logger.Infof("can't migrate db:  %s", err)
@@ -139,7 +140,8 @@ func (r *root) setCmd() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
-				defer disconnectPDB(pdb)
+				logger.Infof("pdb after connection %v", pdb)
+				defer disconnectPDB(pdb, logger)
 				ds = storage.NewPostgreVault(pdb)
 			case path != "":
 				var err error
@@ -150,7 +152,9 @@ func (r *root) setCmd() *cobra.Command {
 			}
 
 			pr := provider.NewProvider(cr, ds)
+			logger.Info("prepare get data by key: ", key)
 			err := pr.SetData([]byte(key), []byte(value))
+			logger.Info("ready get data by key: ", key)
 			if err != nil {
 				return fmt.Errorf("can't set data %w", err)
 			}
@@ -181,20 +185,21 @@ func (r *root) getCmd() *cobra.Command {
 		Long:  "it takes keys from user and get value in decrypted manner from specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := r.logger.Named("get-cmd")
+			logger.Info("Start")
 			var ds secretApi.DataSaver
 			var cr = crypto.NewCryptographer([]byte(cipherKey))
 
 			switch {
 			case redisURL != "":
 				rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
-				defer disconnectRDB(rdb)
+				defer disconnectRDB(rdb, logger)
 				err := rdb.Ping(r.cmd.Context()).Err()
 				if err != nil {
 					return fmt.Errorf("redis db is not reachable:  %w", err)
 				}
 				ds = storage.NewRedisVault(rdb)
 			case postgresURL != "":
-				err := migrateUp(postgresURL, migration)
+				err := migrateUp(postgresURL, migration, logger)
 				if err != nil {
 					if errors.Is(err, migrate.ErrNoChange) {
 						logger.Infof("can't migrate db:  %s", err)
@@ -206,7 +211,8 @@ func (r *root) getCmd() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
-				defer disconnectPDB(pdb)
+				logger.Infof("pdb after connection %v", pdb)
+				defer disconnectPDB(pdb, logger)
 				ds = storage.NewPostgreVault(pdb)
 			case path != "":
 				var err error
@@ -217,10 +223,12 @@ func (r *root) getCmd() *cobra.Command {
 			}
 
 			pr := provider.NewProvider(cr, ds)
+			logger.Info("prepare by get data by key: ", key)
 			data, err := pr.GetData([]byte(key))
 			if err != nil {
 				return fmt.Errorf("can't get data by key: %w", err)
 			}
+			logger.Info("ready get data by key: ", key)
 			cmd.Println(string(data))
 			return nil
 		},
@@ -247,11 +255,11 @@ func (r *root) serverCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := r.logger.Named("server")
 			store := make(map[string]api.MethodFactoryFunc)
-
+			logger.Info("Start")
 			switch {
 			case redisURL != "":
 				rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
-				defer disconnectRDB(rdb)
+				defer disconnectRDB(rdb, logger)
 				err := rdb.Ping(r.cmd.Context()).Err()
 				if err != nil {
 					return fmt.Errorf("redis db is not reachable:  %w", err)
@@ -263,7 +271,7 @@ func (r *root) serverCmd() *cobra.Command {
 					return provider.NewProvider(cr, dataRedis), nil
 				}
 			case postgresURL != "":
-				err := migrateUp(postgresURL, migration)
+				err := migrateUp(postgresURL, migration, logger)
 				if err != nil {
 					if errors.Is(err, migrate.ErrNoChange) {
 						logger.Infof("can't migrate db:  %s", err)
@@ -272,11 +280,11 @@ func (r *root) serverCmd() *cobra.Command {
 					}
 				}
 				pdb, err := sqlx.ConnectContext(r.cmd.Context(), "postgres", postgresURL)
-				r.logger.Infof("pdb after connection %v", pdb)
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
-				defer disconnectPDB(pdb)
+				r.logger.Infof("pdb after connection %v", pdb)
+				defer disconnectPDB(pdb, logger)
 				dataPostgres := storage.NewPostgreVault(pdb)
 				// remote method set handler for postgres storage
 				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
@@ -310,7 +318,6 @@ func (r *root) serverCmd() *cobra.Command {
 
 			go func() {
 				r.logger.Infof("listening ")
-				r.logger.Infof("server %v", srv.WriteTimeout)
 				err := srv.ListenAndServe()
 				if err != nil && !errors.Is(err, http.ErrServerClosed) {
 					logger.Errorf("connection error: %s", err)
@@ -389,33 +396,34 @@ func (r *root) serverPingCmd() *cobra.Command {
 	return serverPingCmd
 }
 
-func migrateUp(postgres, source string) error {
-	fmt.Println("root: starting migrate up")
+func migrateUp(postgres, source string, logger *zap.SugaredLogger) error {
+	logger.Info("root: starting migrate up")
 	m, err := migrate.New(
 		source,
 		postgres)
 	if err != nil {
 		return err
 	}
+	logger.Info("root: migrate created")
 	err = m.Up()
 	if err != nil {
 		return err
 	}
-	fmt.Println("root: migrate up")
+	logger.Info("root: migrate up")
 	return nil
 }
 
-func disconnectPDB(pdb *sqlx.DB) {
+func disconnectPDB(pdb *sqlx.DB, logger *zap.SugaredLogger) {
 	err := pdb.Close()
 	if err != nil {
-		fmt.Println("can't disconnect postgres db")
+		logger.Info("can't disconnect postgres db")
 	}
-	fmt.Println("root: rdb disconnect")
+	logger.Info("root: pdb disconnect")
 }
 
-func disconnectRDB(rdb *redis.Client) {
+func disconnectRDB(rdb *redis.Client, logger *zap.SugaredLogger) {
 	err := rdb.Close()
 	if err != nil {
-		fmt.Println("can't disconnect redis db")
+		logger.Info("can't disconnect redis db")
 	}
 }

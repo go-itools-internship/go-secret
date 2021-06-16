@@ -79,7 +79,7 @@ func TestRoot_Get(t *testing.T) {
 		defer cancel()
 		defer func() {
 			fmt.Println("postgres test: try migrate down")
-			err := migrateDown()
+			err := migrateDown(t)
 			if err != nil {
 				fmt.Println("can't migrate down", err)
 			}

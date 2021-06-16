@@ -71,7 +71,7 @@ func TestRoot_Set(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		defer func() {
-			err := migrateDown()
+			err := migrateDown(t)
 			if err != nil {
 				fmt.Println("can't migrate down ", err)
 			}
@@ -85,7 +85,7 @@ func TestRoot_Set(t *testing.T) {
 		require.Error(t, err)
 
 		db, err := sqlx.ConnectContext(ctx, "postgres", postgresURL)
-		defer disconnectPDB(db)
+		defer disconnectPDB(db, r.logger.Named("test"))
 		require.NoError(t, err)
 
 		d := storage.NewPostgreVault(db)

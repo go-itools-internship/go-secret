@@ -31,7 +31,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			port, err := GetFreePort()
 			require.NoError(t, err)
 			r := New()
-			r.logger.Named(t.Name())
+			r.logger = r.logger.Named(t.Name())
 			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--postgres-url", postgresURL, "--migration", migration})
 			go func() {
 				err := r.Execute(ctx)
@@ -72,7 +72,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			port, err := GetFreePort()
 			require.NoError(t, err)
 			r := New()
-			r.logger.Named(t.Name())
+			r.logger = r.logger.Named(t.Name())
 			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--postgres-url", postgresURL, "--migration", migration})
 			go func() {
 				err := r.Execute(ctx)
@@ -126,7 +126,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			port, err := GetFreePort()
 			require.NoError(t, err)
 			r := New()
-			r.logger.Named(t.Name())
+			r.logger = r.logger.Named(t.Name())
 			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--postgres-url", postgresURL, "--migration", migration})
 			go func() {
 				err := r.Execute(ctx)
@@ -176,7 +176,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 			port, err := GetFreePort()
 			require.NoError(t, err)
 			r := New()
-			r.logger.Named(t.Name())
+			r.logger = r.logger.Named(t.Name())
 			r.cmd.SetArgs([]string{"server", "--port", strconv.Itoa(port), "--postgres-url", postgresURL, "--migration", migration})
 			go func() {
 				err := r.Execute(ctx)

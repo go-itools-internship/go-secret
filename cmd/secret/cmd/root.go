@@ -298,20 +298,19 @@ func (r *root) serverCmd() *cobra.Command {
 			handler := api.NewMethods(store, logger.Named("handler"))
 			router := chi.NewRouter()
 			srv := &http.Server{Addr: ":" + port, Handler: router}
-			r.logger.Infof("server-info %v %v %v", srv.ErrorLog, srv.WriteTimeout, srv)
-
 			router.Use(middleware.Heartbeat("/ping"), middleware.RequestLogger(&middleware.DefaultLogFormatter{
 				Logger: &chiLogger{logger.Named("api")},
 			}))
-			router.Get("/", handler.GetByKey)
 			router.Post("/", handler.SetByKey)
-			r.logger.Infof("router %v", router)
+			router.Get("/", handler.GetByKey)
 
 			done := make(chan os.Signal, 1)
 			shutdownCh := make(chan struct{})
 			signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 			go func() {
+				r.logger.Infof("listening ")
+				r.logger.Infof("server %v", srv.WriteTimeout)
 				err := srv.ListenAndServe()
 				if err != nil && !errors.Is(err, http.ErrServerClosed) {
 					logger.Errorf("connection error: %s", err)
@@ -329,7 +328,7 @@ func (r *root) serverCmd() *cobra.Command {
 			go func(ctx context.Context) {
 				defer close(shutdownCh)
 				ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-				r.logger.Infof("ctx-shutdown pdb after connection %v", ctx)
+				r.logger.Infof("ctx-shutdown-pdb after connection %v", ctx)
 				defer cancel()
 				err := srv.Shutdown(ctx)
 				if err != nil {

@@ -81,7 +81,7 @@ func TestRoot_Server_Postgres(t *testing.T) {
 				require.NoError(t, os.Remove("file.txt"))
 			}()
 
-			client := http.Client{Timeout: time.Second}
+			client := http.Client{Timeout: 2 * time.Second}
 			body := bytes.NewBufferString(`{"getter":"key-value","method":"remote","value":"test-value-1"}`)
 			req := httptest.NewRequest(http.MethodPost, "http://localhost:"+strconv.Itoa(port), body)
 			req.Header.Set(api.ParamCipherKey, expectedSipherKey)

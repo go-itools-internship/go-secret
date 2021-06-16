@@ -28,10 +28,12 @@ func NewPostgreVault(p *sqlx.DB) *postgreVault {
 // 	encoded value to storage
 func (r *postgreVault) SaveData(key, encodedValue []byte) error {
 	ctx := context.Background()
+	fmt.Println("postgres-context ", ctx)
 	if bytes.Equal(key, []byte("")) {
 		return errors.New("postgres: key can't be nil ")
 	}
 	tx, err := r.db.BeginTxx(ctx, nil)
+	fmt.Println("transaction-begin", tx)
 	if err != nil {
 		return fmt.Errorf("postgres: can't begin transaction  %w", err)
 	}
@@ -45,7 +47,8 @@ func (r *postgreVault) SaveData(key, encodedValue []byte) error {
 			return fmt.Errorf("postgres: can't delete data %w", err)
 		}
 	} else {
-		_, err = tx.ExecContext(ctx, "INSERT INTO postgres (key , value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2;", string(key), hex.EncodeToString(encodedValue))
+		data, err := tx.ExecContext(ctx, "INSERT INTO postgres (key , value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2;", string(key), hex.EncodeToString(encodedValue))
+		fmt.Println("try insert", data)
 		if err != nil {
 			rErr := tx.Rollback()
 			if rErr != nil {

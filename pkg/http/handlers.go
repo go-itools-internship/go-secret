@@ -127,7 +127,7 @@ func (a *methods) SetByKey(w http.ResponseWriter, r *http.Request) {
 		a.writeErrorResponse(w, http.StatusInternalServerError, fmt.Errorf("cannot set data: %w", err))
 		return
 	}
-
+	logger.Infof(requestBody.Value)
 	w.WriteHeader(http.StatusNoContent)
 }
 

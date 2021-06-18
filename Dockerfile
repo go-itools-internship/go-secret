@@ -5,5 +5,6 @@ RUN make build
 
 FROM alpine:latest
 COPY --from=builder /go-secret/secret .
+COPY --from=builder /go-secret/scripts/migrations /migrations
 ENTRYPOINT ["./secret"]
 CMD ["server"]

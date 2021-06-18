@@ -27,7 +27,7 @@ func NewRedisVault(rdb *redis.Client) *redisVault {
 func (r *redisVault) SaveData(key, encodedValue []byte) error {
 	ctx := context.Background()
 	if bytes.Equal(key, []byte("")) {
-		return errors.New("storage: key can't be nil ")
+		return errors.New("storage: key can't be nil")
 	}
 	if bytes.Equal(encodedValue, []byte("")) {
 		fmt.Println("Key was deleted")
@@ -49,7 +49,7 @@ func (r *redisVault) SaveData(key, encodedValue []byte) error {
 func (r *redisVault) ReadData(key []byte) ([]byte, error) {
 	ctx := context.Background()
 	if bytes.Equal(key, []byte("")) {
-		return nil, errors.New("storage: key can't be nil ")
+		return nil, errors.New("storage: key can't be nil")
 	}
 	val, err := r.client.Get(ctx, string(key)).Result()
 	if err != nil {

@@ -20,16 +20,14 @@ const (
 )
 
 func TestPostgreVault_SaveData(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
+	require.NoError(t, err)
+	defer disconnectPDB(db, t)
 	t.Run("success", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
 		migrateUp(t)
 		defer migrateDown(t)
-
-		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
-		require.NoError(t, err)
-		defer disconnectPDB(db, t)
 
 		err = db.Ping()
 		require.NoError(t, err)
@@ -39,15 +37,8 @@ func TestPostgreVault_SaveData(t *testing.T) {
 		require.NoError(t, err)
 	})
 	t.Run("success update if try set repeated key in db", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
 		migrateUp(t)
 		defer migrateDown(t)
-
-		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
-		require.NoError(t, err)
-		defer disconnectPDB(db, t)
 
 		err = db.Ping()
 		require.NoError(t, err)
@@ -64,15 +55,8 @@ func TestPostgreVault_SaveData(t *testing.T) {
 		require.EqualValues(t, "value", string(data))
 	})
 	t.Run("key nil error if try set nil value into db", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
 		migrateUp(t)
 		defer migrateDown(t)
-
-		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
-		require.NoError(t, err)
-		defer disconnectPDB(db, t)
 
 		err = db.Ping()
 		require.NoError(t, err)
@@ -85,39 +69,32 @@ func TestPostgreVault_SaveData(t *testing.T) {
 		require.NoError(t, err)
 
 		data, err := d.ReadData([]byte("k1234"))
-		require.Error(t, err, "postgre: key not found")
-		require.EqualValues(t, []byte(nil), string(data))
+		require.Error(t, err, "key not found")
+		require.Empty(t, data)
 	})
 	t.Run("error if set nil key", func(t *testing.T) {
 		key := ""
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
 
 		migrateUp(t)
 		defer migrateDown(t)
-
-		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
-		require.NoError(t, err)
-		defer disconnectPDB(db, t)
 
 		d := NewPostgreVault(db)
 		err = d.SaveData([]byte(key), []byte("value1234"))
 		require.Error(t, err)
-		require.EqualValues(t, "postgres: key can't be nil", err.Error())
+		require.EqualValues(t, "key can't be nil", err.Error())
 	})
 }
 
 func TestPostgreVault_ReadData(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
+	defer disconnectPDB(db, t)
+	require.NoError(t, err)
 
+	t.Run("success", func(t *testing.T) {
 		migrateUp(t)
 		defer migrateDown(t)
-
-		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
-		defer disconnectPDB(db, t)
-		require.NoError(t, err)
 
 		err = db.Ping()
 		require.NoError(t, err)
@@ -131,21 +108,15 @@ func TestPostgreVault_ReadData(t *testing.T) {
 	})
 	t.Run("error if get by nil key", func(t *testing.T) {
 		key := ""
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
 
 		migrateUp(t)
 		defer migrateDown(t)
 
-		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
-		defer disconnectPDB(db, t)
-		require.NoError(t, err)
-
 		d := NewPostgreVault(db)
 		data, err := d.ReadData([]byte(key))
 		require.Error(t, err)
-		require.EqualValues(t, "postgres: key can't be nil", err.Error())
-		require.EqualValues(t, []byte(nil), data)
+		require.Empty(t, data)
+		require.EqualValues(t, "key can't be nil", err.Error())
 	})
 }
 

@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -24,12 +23,13 @@ func TestPostgreVault_SaveData(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+
+		migrateUp(t)
+		defer migrateDown(t)
+
 		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
 		require.NoError(t, err)
-		defer disconnectPDB(db)
-
-		migrateUp()
-		defer migrateDown()
+		defer disconnectPDB(db, t)
 
 		err = db.Ping()
 		require.NoError(t, err)
@@ -41,12 +41,13 @@ func TestPostgreVault_SaveData(t *testing.T) {
 	t.Run("success update if try set repeated key in db", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+
+		migrateUp(t)
+		defer migrateDown(t)
+
 		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
 		require.NoError(t, err)
-		defer disconnectPDB(db)
-
-		migrateUp()
-		defer migrateDown()
+		defer disconnectPDB(db, t)
 
 		err = db.Ping()
 		require.NoError(t, err)
@@ -65,12 +66,13 @@ func TestPostgreVault_SaveData(t *testing.T) {
 	t.Run("key nil error if try set nil value into db", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+
+		migrateUp(t)
+		defer migrateDown(t)
+
 		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
 		require.NoError(t, err)
-		defer disconnectPDB(db)
-
-		migrateUp()
-		defer migrateDown()
+		defer disconnectPDB(db, t)
 
 		err = db.Ping()
 		require.NoError(t, err)
@@ -90,17 +92,18 @@ func TestPostgreVault_SaveData(t *testing.T) {
 		key := ""
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+
+		migrateUp(t)
+		defer migrateDown(t)
+
 		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
 		require.NoError(t, err)
-		defer disconnectPDB(db)
-
-		migrateUp()
-		defer migrateDown()
+		defer disconnectPDB(db, t)
 
 		d := NewPostgreVault(db)
 		err = d.SaveData([]byte(key), []byte("value1234"))
 		require.Error(t, err)
-		require.EqualValues(t, "postgres: key can't be nil ", err.Error())
+		require.EqualValues(t, "postgres: key can't be nil", err.Error())
 	})
 }
 
@@ -108,12 +111,13 @@ func TestPostgreVault_ReadData(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
-		defer disconnectPDB(db)
-		require.NoError(t, err)
 
-		migrateUp()
-		defer migrateDown()
+		migrateUp(t)
+		defer migrateDown(t)
+
+		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
+		defer disconnectPDB(db, t)
+		require.NoError(t, err)
 
 		err = db.Ping()
 		require.NoError(t, err)
@@ -129,12 +133,13 @@ func TestPostgreVault_ReadData(t *testing.T) {
 		key := ""
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
-		defer disconnectPDB(db)
-		require.NoError(t, err)
 
-		migrateUp()
-		defer migrateDown()
+		migrateUp(t)
+		defer migrateDown(t)
+
+		db, err := sqlx.ConnectContext(ctx, "postgres", postgreURL)
+		defer disconnectPDB(db, t)
+		require.NoError(t, err)
 
 		d := NewPostgreVault(db)
 		data, err := d.ReadData([]byte(key))
@@ -144,35 +149,35 @@ func TestPostgreVault_ReadData(t *testing.T) {
 	})
 }
 
-func migrateUp() {
+func migrateUp(t *testing.T) {
 	m, err := migrate.New(
 		migration,
 		postgreURL)
 	if err != nil {
-		fmt.Println(err)
+		t.Log(err)
 	}
 	err = m.Up()
 	if err != nil {
-		fmt.Println(err)
+		t.Log(err)
 	}
 }
 
-func migrateDown() {
+func migrateDown(t *testing.T) {
 	m, err := migrate.New(
 		migration,
 		postgreURL)
 	if err != nil {
-		fmt.Println(err)
+		t.Log(err)
 	}
 	err = m.Down()
 	if err != nil {
-		fmt.Println(err)
+		t.Log(err)
 	}
 }
 
-func disconnectPDB(pdb *sqlx.DB) {
+func disconnectPDB(pdb *sqlx.DB, t *testing.T) {
 	err := pdb.Close()
 	if err != nil {
-		fmt.Println("can't disconnect postgres db")
+		t.Log("can't disconnect postgres db")
 	}
 }

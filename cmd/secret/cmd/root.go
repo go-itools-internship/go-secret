@@ -283,7 +283,7 @@ func (r *root) serverCmd() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("postgres url is not reachable:  %w", err)
 				}
-				r.logger.Infof("pdb after connection %v", pdb)
+				logger.Infof("pdb after connection %v", pdb)
 				defer disconnectPDB(pdb, logger)
 				dataPostgres := storage.NewPostgreVault(pdb)
 				// remote method set handler for postgres storage
@@ -317,7 +317,7 @@ func (r *root) serverCmd() *cobra.Command {
 			signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 			go func() {
-				r.logger.Infof("listening ")
+				logger.Infof("listening ")
 				err := srv.ListenAndServe()
 				if err != nil && !errors.Is(err, http.ErrServerClosed) {
 					logger.Errorf("connection error: %s", err)
@@ -335,7 +335,7 @@ func (r *root) serverCmd() *cobra.Command {
 			go func(ctx context.Context) {
 				defer close(shutdownCh)
 				ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-				r.logger.Infof("ctx-shutdown-pdb after connection %v", ctx)
+				logger.Infof("ctx-shutdown-pdb after connection %v", ctx)
 				defer cancel()
 				err := srv.Shutdown(ctx)
 				if err != nil {
@@ -397,33 +397,39 @@ func (r *root) serverPingCmd() *cobra.Command {
 }
 
 func migrateUp(postgres, source string, logger *zap.SugaredLogger) error {
-	logger.Info("root: starting migrate up")
+	logger = logger.Named("migration")
+	logger.Info("starting from source=%s", source)
 	m, err := migrate.New(
 		source,
 		postgres)
 	if err != nil {
 		return err
 	}
-	logger.Info("root: migrate created")
+	logger.Info("created")
 	err = m.Up()
 	if err != nil {
 		return err
 	}
-	logger.Info("root: migrate up")
+	logger.Info("finished")
 	return nil
 }
 
 func disconnectPDB(pdb *sqlx.DB, logger *zap.SugaredLogger) {
+	logger = logger.Named("disconnect")
 	err := pdb.Close()
 	if err != nil {
-		logger.Info("can't disconnect postgres db")
+		logger.Warnf("can't disconnect postgres db, error=%v", err)
+		return
 	}
-	logger.Info("root: pdb disconnect")
+	logger.Info("pdb disconnect")
 }
 
 func disconnectRDB(rdb *redis.Client, logger *zap.SugaredLogger) {
+	logger = logger.Named("disconnect")
 	err := rdb.Close()
 	if err != nil {
-		logger.Info("can't disconnect redis db")
+		logger.Warnf("can't disconnect redis db, error=%v", err)
+		return
 	}
+	logger.Info("rdb disconnected")
 }

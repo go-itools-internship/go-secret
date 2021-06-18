@@ -29,38 +29,38 @@ func NewPostgreVault(p *sqlx.DB) *postgreVault {
 func (r *postgreVault) SaveData(key, encodedValue []byte) error {
 	ctx := context.Background()
 	if bytes.Equal(key, []byte("")) {
-		return errors.New("postgres: key can't be nil ")
+		return errors.New("postgres: key can't be nil")
 	}
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("postgres: can't begin transaction  %w", err)
+		return fmt.Errorf("postgres: can't begin transaction: %w", err)
 	}
 	if bytes.Equal(encodedValue, []byte("")) {
 		_, err = tx.ExecContext(ctx, "DELETE FROM postgres WHERE key=$1;", string(key))
 		if err != nil {
 			rErr := tx.Rollback()
 			if rErr != nil {
-				return fmt.Errorf("postgres: can't rollback %v %v", err, rErr)
+				return fmt.Errorf("postgres: can't rollback err=%v: %w", rErr, err)
 			}
-			return fmt.Errorf("postgres: can't delete data %w", err)
+			return fmt.Errorf("postgres: can't delete data: %w", err)
 		}
 	} else {
 		_, err = tx.ExecContext(ctx, "INSERT INTO postgres (key , value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2;", string(key), hex.EncodeToString(encodedValue))
 		if err != nil {
 			rErr := tx.Rollback()
 			if rErr != nil {
-				return fmt.Errorf("postgres: can't rollback %v %v", err, rErr)
+				return fmt.Errorf("postgres: can't rollback err=%v: %w", rErr, err)
 			}
-			return fmt.Errorf("postgres: can't insert data %w", err)
+			return fmt.Errorf("postgres: can't insert data: %w", err)
 		}
 	}
 	err = tx.Commit()
 	if err != nil {
 		rErr := tx.Rollback()
 		if rErr != nil {
-			return fmt.Errorf("postgres: can't rollback %v %v", err, rErr)
+			return fmt.Errorf("postgres: can't rollback err=%v: %w", rErr, err)
 		}
-		return fmt.Errorf("postgres: can't commit %w", err)
+		return fmt.Errorf("postgres: can't commit: %w", err)
 	}
 	return nil
 }
@@ -70,7 +70,7 @@ func (r *postgreVault) SaveData(key, encodedValue []byte) error {
 func (r *postgreVault) ReadData(key []byte) ([]byte, error) {
 	ctx := context.Background()
 	if bytes.Equal(key, []byte("")) {
-		return nil, errors.New("postgres: key can't be nil ")
+		return nil, errors.New("postgres: key can't be nil")
 	}
 	var val []struct {
 		Value string `db:"value"`
@@ -80,11 +80,11 @@ func (r *postgreVault) ReadData(key []byte) ([]byte, error) {
 		return nil, fmt.Errorf("postgres: %w", err)
 	}
 	if len(val) == 0 {
-		return nil, errors.New("postgres: key not found ")
+		return nil, errors.New("postgres: key not found")
 	}
 	value, err := hex.DecodeString(val[0].Value)
 	if err != nil {
-		return nil, fmt.Errorf("postgres: cant't decode value %w", err)
+		return nil, fmt.Errorf("postgres: cant't decode value: %w", err)
 	}
 	return value, nil
 }

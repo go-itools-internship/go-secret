@@ -29,7 +29,7 @@ func NewPostgreVault(p *sqlx.DB) *postgreVault {
 func (r *postgreVault) SaveData(key, encodedValue []byte) error {
 	ctx := context.Background()
 	if bytes.Equal(key, []byte("")) {
-		return errors.New("key can't be nil")
+		return errors.New("postgres: key can't be nil")
 	}
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
@@ -70,7 +70,7 @@ func (r *postgreVault) SaveData(key, encodedValue []byte) error {
 func (r *postgreVault) ReadData(key []byte) ([]byte, error) {
 	ctx := context.Background()
 	if bytes.Equal(key, []byte("")) {
-		return nil, errors.New("key can't be nil")
+		return nil, errors.New("postgres: key can't be nil")
 	}
 	var val []struct {
 		Value string `db:"value"`
@@ -80,7 +80,7 @@ func (r *postgreVault) ReadData(key []byte) ([]byte, error) {
 		return nil, fmt.Errorf("postgres: %w", err)
 	}
 	if len(val) == 0 {
-		return nil, errors.New("key not found")
+		return nil, errors.New("postgres: key not found")
 	}
 	value, err := hex.DecodeString(val[0].Value)
 	if err != nil {

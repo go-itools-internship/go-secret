@@ -19,9 +19,13 @@ func NewProvider(cryptographer secret.Cryptographer, dataSaver secret.DataSaver)
 func (p *provider) SetData(key, value []byte) error {
 	encodedValue, err := p.cryptographer.Encode(value)
 	if err != nil {
-		return fmt.Errorf("provider, SetData method: encode error: %w", err)
+		return fmt.Errorf("provider, SetData method: encode value error: %w", err)
 	}
-	saveError := p.dataSaver.SaveData(key, encodedValue)
+	encodedKey, err := p.cryptographer.Encode(key)
+	if err != nil {
+		return fmt.Errorf("provider, SetData method: encode key error: %w", err)
+	}
+	saveError := p.dataSaver.SaveData(encodedKey, encodedValue)
 	if saveError != nil {
 		return fmt.Errorf("provider, SetData method: save error: %w", saveError)
 	}
@@ -29,7 +33,11 @@ func (p *provider) SetData(key, value []byte) error {
 }
 
 func (p *provider) GetData(key []byte) ([]byte, error) {
-	data, err := p.dataSaver.ReadData(key)
+	encodedKey, err := p.cryptographer.Encode(key)
+	if err != nil {
+		return nil, fmt.Errorf("provider, GetData method: encode key error: %w", err)
+	}
+	data, err := p.dataSaver.ReadData(encodedKey)
 	if err != nil {
 		return nil, fmt.Errorf("provider, GetData method: read data error: %w", err)
 	}

@@ -14,11 +14,13 @@ func TestProvider_SetData(t *testing.T) {
 		key := []byte{1, 1, 1}
 		value := []byte{0, 1, 3}
 		encodedValue := []byte{0, 1, 3, 5, 34}
+		encodedKey := []byte{0, 1}
 		mockCr := new(MockCryptographer)
 		mockDs := new(MockDataSaver)
 
 		mockCr.On("Encode", value).Return(encodedValue, nil)
-		mockDs.On("SaveData", key, encodedValue).Return(nil)
+		mockCr.On("Encode", key).Return(encodedKey, nil)
+		mockDs.On("SaveData", encodedKey, encodedValue).Return(nil)
 
 		p := NewProvider(mockCr, mockDs)
 		err := p.SetData(key, value)
@@ -40,7 +42,7 @@ func TestProvider_SetData(t *testing.T) {
 		p := NewProvider(mockCr, mockDs)
 		err := p.SetData(key, value)
 		require.Error(t, err, "error assert failed")
-		require.EqualValues(t, "provider, SetData method: encode error: test", err.Error())
+		require.EqualValues(t, "provider, SetData method: encode value error: test", err.Error())
 
 		mockCr.AssertExpectations(t)
 	})
@@ -49,11 +51,13 @@ func TestProvider_SetData(t *testing.T) {
 		key := []byte{1, 1, 1}
 		value := []byte{0, 1, 3}
 		encodedValue := []byte{0, 1, 3, 5, 34}
+		encodedKey := []byte{0, 1, 3, 5, 34}
 		mockCr := new(MockCryptographer)
 		mockDs := new(MockDataSaver)
 
 		mockCr.On("Encode", value).Return(encodedValue, nil)
-		mockDs.On("SaveData", key, encodedValue).Return(fmt.Errorf("test"))
+		mockCr.On("Encode", key).Return(encodedKey, nil)
+		mockDs.On("SaveData", encodedKey, encodedValue).Return(fmt.Errorf("test"))
 
 		p := NewProvider(mockCr, mockDs)
 		err := p.SetData(key, value)
@@ -69,14 +73,16 @@ func TestProvider_GetData(t *testing.T) {
 		key := []byte{1, 1, 1}
 		value := []byte{0, 1, 3}
 		encodedValue := []byte{0, 1, 3, 5, 34}
+		encodedKey := []byte{1, 1, 1}
 		mockCr := new(MockCryptographer)
 		mockDs := new(MockDataSaver)
 
 		mockDs.On("ReadData", key).Return(encodedValue, nil)
+		mockCr.On("Encode", key).Return(encodedKey, nil)
 		mockCr.On("Decode", encodedValue).Return(value, nil)
 
 		p := NewProvider(mockCr, mockDs)
-		data, err := p.GetData(key)
+		data, err := p.GetData(encodedKey)
 		require.NoError(t, err)
 		assert.Equal(t, value, data)
 
@@ -86,13 +92,15 @@ func TestProvider_GetData(t *testing.T) {
 
 	t.Run("read data error", func(t *testing.T) {
 		key := []byte{1, 1, 1}
+		encodedKey := []byte{1, 1, 1}
 		mockCr := new(MockCryptographer)
 		mockDs := new(MockDataSaver)
 
+		mockCr.On("Encode", key).Return(encodedKey, nil)
 		mockDs.On("ReadData", key).Return(nil, fmt.Errorf("test"))
 
 		p := NewProvider(mockCr, mockDs)
-		data, err := p.GetData(key)
+		data, err := p.GetData(encodedKey)
 		require.Error(t, err, "error assert failed")
 		require.EqualValues(t, "provider, GetData method: read data error: test", err.Error())
 		assert.Equal(t, "", string(data))
@@ -103,14 +111,16 @@ func TestProvider_GetData(t *testing.T) {
 		key := []byte{1, 1, 1}
 		value := []byte{0, 1, 3}
 		encodedValue := []byte{0, 1, 3, 4}
+		encodedKey := []byte{1, 1, 1}
 		mockCr := new(MockCryptographer)
 		mockDs := new(MockDataSaver)
 
+		mockCr.On("Encode", key).Return(encodedKey, nil)
 		mockDs.On("ReadData", key).Return(encodedValue, nil)
 		mockCr.On("Decode", encodedValue).Return(value, fmt.Errorf("test"))
 
 		p := NewProvider(mockCr, mockDs)
-		data, err := p.GetData(key)
+		data, err := p.GetData(encodedKey)
 		require.Error(t, err, "error assert failed")
 		require.EqualValues(t, "provider, GetData method: decode error: test", err.Error())
 		assert.Equal(t, "", string(data))

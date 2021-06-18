@@ -85,7 +85,7 @@ func TestPostgreVault_SaveData(t *testing.T) {
 		require.NoError(t, err)
 
 		data, err := d.ReadData([]byte("k1234"))
-		require.Error(t, err, "postgre: key not found ")
+		require.Error(t, err, "postgre: key not found")
 		require.EqualValues(t, []byte(nil), string(data))
 	})
 	t.Run("error if set nil key", func(t *testing.T) {
@@ -144,7 +144,7 @@ func TestPostgreVault_ReadData(t *testing.T) {
 		d := NewPostgreVault(db)
 		data, err := d.ReadData([]byte(key))
 		require.Error(t, err)
-		require.EqualValues(t, "postgres: key can't be nil ", err.Error())
+		require.EqualValues(t, "postgres: key can't be nil", err.Error())
 		require.EqualValues(t, []byte(nil), data)
 	})
 }

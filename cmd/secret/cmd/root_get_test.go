@@ -13,13 +13,17 @@ import (
 )
 
 func TestRoot_Get(t *testing.T) {
-	value := "60OBdPOOkSOu6kn8ZuMuXtAPVrUEFkPREydDwY6+ip/LrAFaHSc="
+	value := "AAAAAAAAAAAAAAAAUUOtwVVyLzSkY8gG5MbGe33og7FGvG0pgRE="
 	t.Run("success", func(t *testing.T) {
 		file, err := os.Create(path)
 		require.NoError(t, err)
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 
+		r := New()
+		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--path", path})
+		err = r.Execute(ctx)
+		require.NoError(t, err)
 		defer func() {
 			require.NoError(t, os.Remove(path))
 		}()
@@ -28,11 +32,6 @@ func TestRoot_Get(t *testing.T) {
 			require.NoError(t, file.Close())
 		}()
 
-		fileTestData := make(map[string]string)
-		fileTestData[key] = value
-		require.NoError(t, json.NewEncoder(file).Encode(&fileTestData))
-
-		r := New()
 		r.cmd.SetArgs([]string{"get", "--key", key, "--cipher-key", "ck", "--path", path})
 		executeErr := r.Execute(ctx)
 		require.NoError(t, executeErr)
@@ -53,6 +52,34 @@ func TestRoot_Get(t *testing.T) {
 			break // we iterate one time to get first value
 		}
 		require.EqualValues(t, value, got)
+	})
+	t.Run("error after get file command with wrong ck", func(t *testing.T) {
+		file, err := os.Create(path)
+		require.NoError(t, err)
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+
+		r := New()
+		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--path", path})
+		err = r.Execute(ctx)
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, os.Remove(path))
+		}()
+
+		defer func() {
+			require.NoError(t, file.Close())
+		}()
+
+		var b bytes.Buffer
+		r.cmd.SetOut(&b)
+
+		r.cmd.SetArgs([]string{"get", "--key", key, "--cipher-key", "wrong-ck", "--path", path})
+		err = r.Execute(ctx)
+		require.Error(t, err)
+		out := b.String()
+		require.EqualValues(t, "can't get data by key: provider, GetData method: read data error: filevault: cannot read data: not found", err.Error())
+		require.Empty(t, out)
 	})
 	t.Run("success after get redis command", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -86,6 +113,7 @@ func TestRoot_Get(t *testing.T) {
 		}()
 
 		r := New()
+
 		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", migration})
 		executeErr := r.Execute(ctx)
 		require.NoError(t, executeErr)
@@ -99,5 +127,51 @@ func TestRoot_Get(t *testing.T) {
 		out := b.String()
 		require.NoError(t, err)
 		require.EqualValues(t, "test value\n", out)
+	})
+	t.Run("error after get redis command with wrong ck", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+
+		r := New()
+
+		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--redis-url", redisURL})
+		executeErr := r.Execute(ctx)
+		require.NoError(t, executeErr)
+
+		var b bytes.Buffer
+		r.cmd.SetOut(&b)
+
+		r.cmd.SetArgs([]string{"get", "--key", key, "--cipher-key", "wrong-ck", "--redis-url", redisURL})
+		err := r.Execute(ctx)
+		require.NoError(t, err)
+		out := b.String()
+		require.EqualValues(t, "\n", out)
+	})
+	t.Run("error after get postgres command with wrong ck", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		defer func() {
+			fmt.Println("postgres test: try migrate down")
+			err := migrateDown(t)
+			if err != nil {
+				fmt.Println("can't migrate down", err)
+			}
+		}()
+
+		r := New()
+
+		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", migration})
+		executeErr := r.Execute(ctx)
+		require.NoError(t, executeErr)
+
+		var b bytes.Buffer
+		r.cmd.SetOut(&b)
+
+		r.cmd.SetArgs([]string{"get", "--key", key, "--cipher-key", "wrong-ck", "--postgres-url", postgresURL, "--migration", migration})
+		err := r.Execute(ctx)
+		require.Error(t, err)
+		out := b.String()
+		require.Empty(t, out)
+		require.EqualValues(t, "can't get data by key: provider, GetData method: read data error: postgres: key not found", err.Error())
 	})
 }

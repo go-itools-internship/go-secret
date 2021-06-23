@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -99,8 +100,6 @@ func TestRoot_Server(t *testing.T) {
 			req.URL.RawQuery = query.Encode()
 
 			resp, err = client.Do(req)
-			require.NoError(t, err)
-			_, err = ioutil.ReadAll(resp.Body)
 			require.NoError(t, err)
 			require.EqualValues(t, http.StatusOK, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
@@ -339,4 +338,59 @@ func migrateDown(t *testing.T) error {
 	}
 	t.Log("root-test: migrate down")
 	return nil
+}
+
+func TestRootReader_Read(t *testing.T) {
+	t.Run("success if buffer more len of buffer", func(t *testing.T) {
+		reader := NewRootReader([]byte{1, 3, 4, 5})
+		p := make([]byte, 8)
+		n, err := io.ReadFull(reader, p)
+		require.NoError(t, err)
+		require.EqualValues(t, []byte{1, 3, 4, 5, 0, 0, 0, 0}, p)
+		require.EqualValues(t, len(p), n)
+	})
+	t.Run("no error if reader read more data than len of buffer", func(t *testing.T) {
+		reader := NewRootReader([]byte{1, 3, 4, 5, 6})
+		p := make([]byte, 4)
+		n, err := io.ReadFull(reader, p)
+		require.NoError(t, err)
+		require.EqualValues(t, []byte{1, 3, 4, 5}, p)
+		require.EqualValues(t, len(p), n)
+	})
+	t.Run("no error reader nil", func(t *testing.T) {
+		reader := NewRootReader(nil)
+		p := make([]byte, 4)
+		n, err := io.ReadFull(reader, p)
+		require.NoError(t, err)
+		require.EqualValues(t, []byte{0, 0, 0, 0}, p)
+		require.EqualValues(t, 0, n)
+	})
+	t.Run("when reader nil and buffer empty", func(t *testing.T) {
+		reader := NewRootReader(nil)
+		p := make([]byte, 0)
+		n, err := io.ReadFull(reader, p)
+		require.NoError(t, err)
+		require.EqualValues(t, []byte{}, p)
+		require.EqualValues(t, 0, n)
+	})
+	t.Run("no error if buffer empty", func(t *testing.T) {
+		reader := NewRootReader([]byte{1, 3, 4})
+		p := make([]byte, 0)
+		n, err := io.ReadFull(reader, p)
+		require.NoError(t, err)
+		require.EqualValues(t, []byte{}, p)
+		require.EqualValues(t, 0, n)
+	})
+	t.Run("return same result", func(t *testing.T) {
+		reader := NewRootReader([]byte{1, 3, 4, 5, 6})
+		p := make([]byte, 8)
+		i := 0
+		for i < 100 {
+			n, err := io.ReadFull(reader, p)
+			require.NoError(t, err)
+			require.EqualValues(t, []byte{1, 3, 4, 5, 6, 0, 0}, p)
+			require.EqualValues(t, len(p), n)
+			i++
+		}
+	})
 }

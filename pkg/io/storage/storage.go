@@ -4,6 +4,7 @@ Package storage provides functions for storing and retrieving data.
 package storage
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -58,7 +59,7 @@ func (f *fileVault) SaveData(key, encodedValue []byte) error {
 		}
 	}()
 
-	f.storage[string(key)] = encodedValue
+	f.storage[hex.EncodeToString(key)] = encodedValue
 	if err = json.NewEncoder(file).Encode(f.storage); err != nil {
 		return fmt.Errorf("filevault: unable to encode data while saving: %w", err)
 	}
@@ -80,7 +81,7 @@ func (f *fileVault) ReadData(key []byte) ([]byte, error) {
 		return nil, fmt.Errorf("filevault: unable to decode while reading: %w", err)
 	}
 
-	data, ok := f.storage[string(key)]
+	data, ok := f.storage[hex.EncodeToString(key)]
 	if !ok {
 		return nil, fmt.Errorf("filevault: cannot read data: not found")
 	}

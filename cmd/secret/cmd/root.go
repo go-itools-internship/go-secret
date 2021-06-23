@@ -115,7 +115,7 @@ func (r *root) setCmd() *cobra.Command {
 		Long:  "it takes keys and a value from user and saves value in encrypted manner in specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var ds secretApi.DataSaver
-			var cr = crypto.NewCryptographer([]byte(cipherKey))
+			var cr = crypto.NewCryptographer([]byte(cipherKey), &rootReader{})
 			logger := r.logger.Named("set-cmd")
 			logger.Info("Start")
 			switch {
@@ -187,7 +187,8 @@ func (r *root) getCmd() *cobra.Command {
 			logger := r.logger.Named("get-cmd")
 			logger.Info("Start")
 			var ds secretApi.DataSaver
-			var cr = crypto.NewCryptographer([]byte(cipherKey))
+
+			var cr = crypto.NewCryptographer([]byte(cipherKey), &rootReader{})
 
 			switch {
 			case redisURL != "":
@@ -267,7 +268,7 @@ func (r *root) serverCmd() *cobra.Command {
 				dataRedis := storage.NewRedisVault(rdb)
 				// remote method set handler for redis storage
 				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
-					cr := crypto.NewCryptographer([]byte(cipher))
+					cr := crypto.NewCryptographer([]byte(cipher), &rootReader{})
 					return provider.NewProvider(cr, dataRedis), nil
 				}
 			case postgresURL != "":
@@ -288,7 +289,7 @@ func (r *root) serverCmd() *cobra.Command {
 				dataPostgres := storage.NewPostgreVault(pdb)
 				// remote method set handler for postgres storage
 				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
-					cr := crypto.NewCryptographer([]byte(cipher))
+					cr := crypto.NewCryptographer([]byte(cipher), &rootReader{})
 					return provider.NewProvider(cr, dataPostgres), nil
 				}
 			}
@@ -298,7 +299,7 @@ func (r *root) serverCmd() *cobra.Command {
 					return fmt.Errorf("can't get storage by path: %s", err)
 				}
 				store["local"] = func(cipher string) (secretApi.Provider, func()) {
-					cr := crypto.NewCryptographer([]byte(cipher))
+					cr := crypto.NewCryptographer([]byte(cipher), &rootReader{})
 					return provider.NewProvider(cr, ds), nil
 				}
 			}
@@ -432,4 +433,20 @@ func disconnectRDB(rdb *redis.Client, logger *zap.SugaredLogger) {
 		return
 	}
 	logger.Info("rdb disconnected")
+}
+
+// A rootReader implements the io.Reader
+type rootReader struct {
+}
+
+func NewRootReader(b []byte) *rootReader { return &rootReader{} }
+
+func (r *rootReader) Read(b []byte) (n int, err error) {
+	//if r.i >= int64(len(r.s)) {
+	//	return 0, io.EOF
+	//}
+	//r.prevRune = -1
+	//n = copy(b, r.s[r.i:])
+	//r.i += int64(n)
+	return
 }

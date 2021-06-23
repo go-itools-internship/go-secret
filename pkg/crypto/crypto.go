@@ -7,24 +7,23 @@ package crypto
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"io"
 )
 
 type cryptographer struct {
-	key        []byte
-	randomFlag bool
+	key         []byte
+	nonceReader io.Reader
 }
 
-func NewCryptographer(key []byte) *cryptographer {
+func NewCryptographer(key []byte, nonceReader io.Reader) *cryptographer {
 	h := sha256.New()
 	key32 := make([]byte, 32)
 	copy(key32, h.Sum(key))
 	return &cryptographer{
-		key:        key32,
-		randomFlag: true,
+		key:         key32,
+		nonceReader: nonceReader,
 	}
 }
 
@@ -41,10 +40,10 @@ func (c *cryptographer) Encode(value []byte) ([]byte, error) {
 	}
 	// Create a nonce. Nonce should be from GCM
 	nonce := make([]byte, aesGCM.NonceSize())
-	if c.randomFlag {
-		if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-			return nil, fmt.Errorf("cryptographer, encode method: unexpected data: %w", err)
-		}
+
+	if _, err = io.ReadFull(c.nonceReader, nonce); err != nil {
+		fmt.Println(c.nonceReader)
+		return nil, fmt.Errorf("cryptographer, encode method: unexpected data: %w", err)
 	}
 	// Encrypt the data using aesGCM.Seal
 	// Since we don't want to save the nonce somewhere else in this case,
@@ -54,6 +53,9 @@ func (c *cryptographer) Encode(value []byte) ([]byte, error) {
 }
 
 func (c *cryptographer) Decode(encodedValue []byte) ([]byte, error) {
+	if encodedValue == nil {
+		return nil, nil
+	}
 	block, err := aes.NewCipher(c.key)
 	if err != nil {
 		return nil, fmt.Errorf("cryptographer, decode method: invalid key: %w", err)

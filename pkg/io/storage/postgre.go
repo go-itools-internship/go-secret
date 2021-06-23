@@ -45,7 +45,7 @@ func (r *postgreVault) SaveData(key, encodedValue []byte) error {
 			return fmt.Errorf("postgres: can't delete data: %w", err)
 		}
 	} else {
-		_, err = tx.ExecContext(ctx, "INSERT INTO postgres (key , value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2;", string(key), hex.EncodeToString(encodedValue))
+		_, err = tx.ExecContext(ctx, "INSERT INTO postgres (key , value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2;", hex.EncodeToString(key), hex.EncodeToString(encodedValue))
 		if err != nil {
 			rErr := tx.Rollback()
 			if rErr != nil {
@@ -75,7 +75,7 @@ func (r *postgreVault) ReadData(key []byte) ([]byte, error) {
 	var val []struct {
 		Value string `db:"value"`
 	}
-	err := r.db.SelectContext(ctx, &val, "SELECT value FROM postgres WHERE key=$1 LIMIT 1;", string(key))
+	err := r.db.SelectContext(ctx, &val, "SELECT value FROM postgres WHERE key=$1 LIMIT 1;", hex.EncodeToString(key))
 	if err != nil {
 		return nil, fmt.Errorf("postgres: %w", err)
 	}

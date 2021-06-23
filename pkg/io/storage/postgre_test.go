@@ -62,13 +62,10 @@ func TestPostgreVault_SaveData(t *testing.T) {
 		require.NoError(t, err)
 
 		d := NewPostgreVault(db)
-		err = d.SaveData([]byte("k1234"), []byte("value1234"))
+		err = d.SaveData([]byte("k12345"), []byte(""))
 		require.NoError(t, err)
 
-		err = d.SaveData([]byte("k1234"), []byte(""))
-		require.NoError(t, err)
-
-		data, err := d.ReadData([]byte("k1234"))
+		data, err := d.ReadData([]byte("k12345"))
 		require.Error(t, err)
 		require.Empty(t, data)
 		require.EqualValues(t, "postgres: key not found", err.Error())

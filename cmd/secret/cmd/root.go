@@ -437,16 +437,19 @@ func disconnectRDB(rdb *redis.Client, logger *zap.SugaredLogger) {
 
 // A rootReader implements the io.Reader
 type rootReader struct {
+	data      []byte
+	readIndex int64
 }
 
-func NewRootReader(b []byte) *rootReader { return &rootReader{} }
+func NewRootReader(b []byte) *rootReader {
+	return &rootReader{data: b}
+}
 
 func (r *rootReader) Read(b []byte) (n int, err error) {
-	//if r.i >= int64(len(r.s)) {
-	//	return 0, io.EOF
-	//}
-	//r.prevRune = -1
-	//n = copy(b, r.s[r.i:])
-	//r.i += int64(n)
+	if r.readIndex >= int64(len(r.data)) {
+		return n + 1, nil
+	}
+	n = copy(b, r.data[r.readIndex:])
+	r.readIndex += int64(n)
 	return
 }

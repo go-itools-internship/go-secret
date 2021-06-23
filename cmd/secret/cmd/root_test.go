@@ -363,7 +363,7 @@ func TestRootReader_Read(t *testing.T) {
 		n, err := io.ReadFull(reader, p)
 		require.NoError(t, err)
 		require.EqualValues(t, []byte{0, 0, 0, 0}, p)
-		require.EqualValues(t, 0, n)
+		require.EqualValues(t, len(p), n)
 	})
 	t.Run("when reader nil and buffer empty", func(t *testing.T) {
 		reader := NewRootReader(nil)
@@ -371,7 +371,7 @@ func TestRootReader_Read(t *testing.T) {
 		n, err := io.ReadFull(reader, p)
 		require.NoError(t, err)
 		require.EqualValues(t, []byte{}, p)
-		require.EqualValues(t, 0, n)
+		require.EqualValues(t, len(p), n)
 	})
 	t.Run("no error if buffer empty", func(t *testing.T) {
 		reader := NewRootReader([]byte{1, 3, 4})
@@ -379,7 +379,7 @@ func TestRootReader_Read(t *testing.T) {
 		n, err := io.ReadFull(reader, p)
 		require.NoError(t, err)
 		require.EqualValues(t, []byte{}, p)
-		require.EqualValues(t, 0, n)
+		require.EqualValues(t, len(p), n)
 	})
 	t.Run("return same result", func(t *testing.T) {
 		reader := NewRootReader([]byte{1, 3, 4, 5, 6})
@@ -388,7 +388,7 @@ func TestRootReader_Read(t *testing.T) {
 		for i < 100 {
 			n, err := io.ReadFull(reader, p)
 			require.NoError(t, err)
-			require.EqualValues(t, []byte{1, 3, 4, 5, 6, 0, 0}, p)
+			require.EqualValues(t, []byte{1, 3, 4, 5, 6, 0, 0, 0}, p)
 			require.EqualValues(t, len(p), n)
 			i++
 		}

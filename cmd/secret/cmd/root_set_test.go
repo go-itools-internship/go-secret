@@ -77,7 +77,6 @@ func TestRoot_Set(t *testing.T) {
 		require.NotEmpty(t, got)
 	})
 	t.Run("expect set data only redis storage", func(t *testing.T) {
-		//t.Skip("skip test until not fix bugs ")
 		key := "12345"
 		cipherKey := "0000000000000000000000001414ed8140b70c40160f706c406352f14f1283d203"
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)

@@ -42,7 +42,6 @@ func (c *cryptographer) Encode(value []byte) ([]byte, error) {
 	nonce := make([]byte, aesGCM.NonceSize())
 
 	if _, err = io.ReadFull(c.nonceReader, nonce); err != nil {
-		fmt.Println(c.nonceReader)
 		return nil, fmt.Errorf("cryptographer, encode method: unexpected data: %w", err)
 	}
 	// Encrypt the data using aesGCM.Seal

@@ -27,6 +27,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-itools-internship/go-secret/pkg/crypto"
+	cryptoReader "github.com/go-itools-internship/go-secret/pkg/io"
 	"github.com/go-itools-internship/go-secret/pkg/io/storage"
 	"github.com/go-itools-internship/go-secret/pkg/provider"
 	"github.com/spf13/cobra"
@@ -105,6 +106,7 @@ func (r *root) setCmd() *cobra.Command {
 	var key string
 	var cipherKey string
 	var value string
+	var cipherCode string
 	var path string
 	var redisURL string
 	var postgresURL string
@@ -115,7 +117,7 @@ func (r *root) setCmd() *cobra.Command {
 		Long:  "it takes keys and a value from user and saves value in encrypted manner in specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var ds secretApi.DataSaver
-			var cr = crypto.NewCryptographer([]byte(cipherKey), &rootReader{})
+			var cr = crypto.NewCryptographer([]byte(cipherKey), cryptoReader.NewRootReader([]byte(cipherCode)))
 			logger := r.logger.Named("set-cmd")
 			logger.Info("Start")
 			switch {
@@ -164,6 +166,7 @@ func (r *root) setCmd() *cobra.Command {
 	setCmd.Flags().StringVarP(&value, "value", "v", value, "value to be encrypted")
 	setCmd.Flags().StringVarP(&key, "key", "k", key, "key for pair key-value")
 	setCmd.Flags().StringVarP(&cipherKey, "cipher-key", "c", cipherKey, "cipher key for data encryption and decryption")
+	setCmd.Flags().StringVarP(&cipherCode, "cipher-code", "d", "", "cipher code for cryptographer io reader")
 	setCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
 	setCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
 	setCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable")
@@ -175,6 +178,7 @@ func (r *root) setCmd() *cobra.Command {
 func (r *root) getCmd() *cobra.Command {
 	var key string
 	var cipherKey string
+	var cipherCode string
 	var path string
 	var redisURL string
 	var postgresURL string
@@ -188,7 +192,7 @@ func (r *root) getCmd() *cobra.Command {
 			logger.Info("Start")
 			var ds secretApi.DataSaver
 
-			var cr = crypto.NewCryptographer([]byte(cipherKey), &rootReader{})
+			var cr = crypto.NewCryptographer([]byte(cipherKey), cryptoReader.NewRootReader([]byte(cipherCode)))
 
 			switch {
 			case redisURL != "":
@@ -236,6 +240,7 @@ func (r *root) getCmd() *cobra.Command {
 	}
 	getCmd.Flags().StringVarP(&key, "key", "k", key, "key for pair key-value")
 	getCmd.Flags().StringVarP(&cipherKey, "cipher-key", "c", cipherKey, "cipher key for data encryption and decryption")
+	getCmd.Flags().StringVarP(&cipherCode, "cipher-code", "d", "", "cipher code for cryptographer io reader")
 	getCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the value will be got")
 	getCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
 	getCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable")
@@ -247,6 +252,7 @@ func (r *root) getCmd() *cobra.Command {
 func (r *root) serverCmd() *cobra.Command {
 	var path string
 	var port string
+	var cipherCode string
 	var redisURL string
 	var postgresURL string
 	var migration string
@@ -268,7 +274,7 @@ func (r *root) serverCmd() *cobra.Command {
 				dataRedis := storage.NewRedisVault(rdb)
 				// remote method set handler for redis storage
 				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
-					cr := crypto.NewCryptographer([]byte(cipher), &rootReader{})
+					cr := crypto.NewCryptographer([]byte(cipher), cryptoReader.NewRootReader([]byte(cipherCode)))
 					return provider.NewProvider(cr, dataRedis), nil
 				}
 			case postgresURL != "":
@@ -289,7 +295,7 @@ func (r *root) serverCmd() *cobra.Command {
 				dataPostgres := storage.NewPostgreVault(pdb)
 				// remote method set handler for postgres storage
 				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
-					cr := crypto.NewCryptographer([]byte(cipher), &rootReader{})
+					cr := crypto.NewCryptographer([]byte(cipher), cryptoReader.NewRootReader([]byte(cipherCode)))
 					return provider.NewProvider(cr, dataPostgres), nil
 				}
 			}
@@ -299,7 +305,7 @@ func (r *root) serverCmd() *cobra.Command {
 					return fmt.Errorf("can't get storage by path: %s", err)
 				}
 				store["local"] = func(cipher string) (secretApi.Provider, func()) {
-					cr := crypto.NewCryptographer([]byte(cipher), &rootReader{})
+					cr := crypto.NewCryptographer([]byte(cipher), cryptoReader.NewRootReader([]byte(cipherCode)))
 					return provider.NewProvider(cr, ds), nil
 				}
 			}
@@ -351,6 +357,7 @@ func (r *root) serverCmd() *cobra.Command {
 	}
 	serverCmd.Flags().StringVarP(&path, "path", "p", "file.txt", "the place where the key/value will be stored/got")
 	serverCmd.Flags().StringVarP(&port, "port", "t", "8888", "localhost address")
+	serverCmd.Flags().StringVarP(&cipherCode, "cipher-code", "d", "", "cipher code for cryptographer io reader")
 	serverCmd.Flags().StringVarP(&redisURL, "redis-url", "r", "", "redis url address. Example: localhost:6379")
 	serverCmd.Flags().StringVarP(&postgresURL, "postgres-url", "s", "", "postgres url address. Example: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable\"")
 	serverCmd.Flags().StringVarP(&migration, "migration", "m", "", "migration up route to scripts/migrations folder. Example: file://../../../scripts/migrations")
@@ -433,23 +440,4 @@ func disconnectRDB(rdb *redis.Client, logger *zap.SugaredLogger) {
 		return
 	}
 	logger.Info("rdb disconnected")
-}
-
-// A rootReader implements the io.Reader
-type rootReader struct {
-	data      []byte
-	readIndex int64
-}
-
-func NewRootReader(b []byte) *rootReader {
-	return &rootReader{data: b}
-}
-
-func (r *rootReader) Read(b []byte) (n int, err error) {
-	if r.readIndex >= int64(len(r.data)) {
-		return n + 1, nil
-	}
-	n = copy(b, r.data[r.readIndex:])
-	r.readIndex += int64(n)
-	return
 }

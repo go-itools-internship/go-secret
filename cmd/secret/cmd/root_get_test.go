@@ -128,6 +128,33 @@ func TestRoot_Get(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, "test value\n", out)
 	})
+	t.Run("error after get postgres command with wrong cipher code", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		defer func() {
+			fmt.Println("postgres test: try migrate down")
+			err := migrateDown(t)
+			if err != nil {
+				fmt.Println("can't migrate down", err)
+			}
+		}()
+
+		r := New()
+
+		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", migration, "--cipher-code", "cipher"})
+		executeErr := r.Execute(ctx)
+		require.NoError(t, executeErr)
+
+		var b bytes.Buffer
+		r.cmd.SetOut(&b)
+
+		r.cmd.SetArgs([]string{"get", "--key", key, "--cipher-key", "ck", "--postgres-url", postgresURL, "--migration", migration})
+		err := r.Execute(ctx)
+		require.Error(t, err)
+		out := b.String()
+		require.Empty(t, out)
+		require.EqualValues(t, "can't get data by key: provider, GetData method: read data error: postgres: key not found", err.Error())
+	})
 	t.Run("error after get redis command with wrong ck", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()

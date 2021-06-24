@@ -47,10 +47,39 @@ func TestRoot_Set(t *testing.T) {
 		}
 		require.NotEmpty(t, got)
 	})
-	t.Run("expect set data only redis storage", func(t *testing.T) {
-		t.Skip("skip test until not fix bugs ")
-		key := "12345"
+	t.Run("set with cipher code ", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
 
+		r := New()
+		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--path", path, "--cipher-code", "12345"})
+		err := r.Execute(ctx)
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, os.Remove(path))
+		}()
+
+		testFile, err := os.Open(path)
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, testFile.Close())
+		}()
+
+		fileData := make(map[string]string)
+		require.NoError(t, json.NewDecoder(testFile).Decode(&fileData))
+
+		var got string
+		require.Len(t, fileData, 1)
+		for key := range fileData {
+			got = key
+			break // we iterate one time to get first key
+		}
+		require.NotEmpty(t, got)
+	})
+	t.Run("expect set data only redis storage", func(t *testing.T) {
+		//t.Skip("skip test until not fix bugs ")
+		key := "12345"
+		cipherKey := "0000000000000000000000001414ed8140b70c40160f706c406352f14f1283d203"
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 
@@ -62,11 +91,11 @@ func TestRoot_Set(t *testing.T) {
 
 		rdb := redis.NewClient(&redis.Options{Addr: redisURL, Password: "", DB: 0})
 
-		val, err := rdb.Get(ctx, key).Result()
-		require.Error(t, err)
+		val, err := rdb.Get(ctx, cipherKey).Result()
+		require.NoError(t, err)
 		require.NotEmpty(t, val)
 	})
-	t.Run("expect success set data postgres storage and get key error", func(t *testing.T) {
+	t.Run("expect success set data postgres storage if get key error", func(t *testing.T) {
 		key := "12345"
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()

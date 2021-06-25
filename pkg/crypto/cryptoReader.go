@@ -1,7 +1,3 @@
-/*
-	Package io contain custom implementation of io Reader.
-	Using for read data many times without changes.
-*/
 package crypto
 
 // A lootReader implements the io.Reader.

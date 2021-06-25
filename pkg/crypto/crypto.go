@@ -1,6 +1,8 @@
 /*
 	Package crypto provides functions to encode and decode data
-	Using aes crypto
+	Using aes crypto.
+	Package crypto contain custom implementation of io Reader.
+	Using for read data many times without changes.
 */
 package crypto
 

@@ -47,38 +47,9 @@ func TestRoot_Set(t *testing.T) {
 		}
 		require.NotEmpty(t, got)
 	})
-	t.Run("set with cipher code ", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-		defer cancel()
-
-		r := New()
-		r.cmd.SetArgs([]string{"set", "--key", key, "--value", "test value", "--cipher-key", "ck", "--path", path, "--cipher-code", "12345"})
-		err := r.Execute(ctx)
-		require.NoError(t, err)
-		defer func() {
-			require.NoError(t, os.Remove(path))
-		}()
-
-		testFile, err := os.Open(path)
-		require.NoError(t, err)
-		defer func() {
-			require.NoError(t, testFile.Close())
-		}()
-
-		fileData := make(map[string]string)
-		require.NoError(t, json.NewDecoder(testFile).Decode(&fileData))
-
-		var got string
-		require.Len(t, fileData, 1)
-		for key := range fileData {
-			got = key
-			break // we iterate one time to get first key
-		}
-		require.NotEmpty(t, got)
-	})
 	t.Run("expect set data only redis storage", func(t *testing.T) {
 		key := "12345"
-		cipherKey := "0000000000000000000000001414ed8140b70c40160f706c406352f14f1283d203"
+		cipherKey := "636b00000000000000000000b669c63918c53bc46f2b9e792bfe3ec1d492742918"
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 

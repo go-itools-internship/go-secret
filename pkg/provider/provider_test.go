@@ -51,7 +51,7 @@ func TestProvider_SetData(t *testing.T) {
 		key := []byte{1, 1, 1}
 		value := []byte{0, 1, 3}
 		encodedValue := []byte{0, 1, 3, 5, 34}
-		encodedKey := []byte{0, 1, 3, 5, 34}
+		encodedKey := []byte{0, 1, 3, 5}
 		mockCr := new(MockCryptographer)
 		mockDs := new(MockDataSaver)
 
@@ -92,11 +92,11 @@ func TestProvider_GetData(t *testing.T) {
 
 	t.Run("read data error", func(t *testing.T) {
 		key := []byte{1, 1, 1}
-		encodedKey := []byte{1, 1, 1}
+		encodedKey := []byte{1, 1, 9}
 		mockCr := new(MockCryptographer)
 		mockDs := new(MockDataSaver)
 
-		mockCr.On("Encode", key).Return(encodedKey, nil)
+		mockCr.On("Encode", encodedKey).Return(key, nil)
 		mockDs.On("ReadData", key).Return(nil, fmt.Errorf("test"))
 
 		p := NewProvider(mockCr, mockDs)

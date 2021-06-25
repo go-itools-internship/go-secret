@@ -441,8 +441,7 @@ func disconnectRDB(rdb *redis.Client, logger *zap.SugaredLogger) {
 }
 
 func hashCipherKey(key string) []byte {
-	sha256.Sum256([]byte(key))
-	key32 := make([]byte, 32)
-	copy(key32, key)
-	return key32
+	h := sha256.New()
+	h.Write([]byte(key))
+	return h.Sum(nil)
 }

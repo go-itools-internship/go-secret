@@ -38,6 +38,7 @@ func (r *redisVault) SaveData(key, encodedValue []byte) error {
 		}
 		return nil
 	}
+	fmt.Println(hex.EncodeToString(key))
 	err := r.client.Set(ctx, hex.EncodeToString(key), encodedValue, 0).Err()
 	if err != nil {
 		return fmt.Errorf("storage: redis client can't set data %w", err)

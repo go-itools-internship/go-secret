@@ -13,7 +13,7 @@ import (
 )
 
 func TestRoot_Get(t *testing.T) {
-	value := "Y2sAAAAAAAAAAAAA8z6GeQ0eQ5SknoSWGO6oVohzHD6DyuWSeH8="
+	value := "2Tvspu/QQhsxTAgQah+xcC3VhifWUjlZHKJYgYIabyiTK4Bx6Zo="
 	t.Run("success", func(t *testing.T) {
 		file, err := os.Create(path)
 		require.NoError(t, err)

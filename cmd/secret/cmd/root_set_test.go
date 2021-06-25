@@ -49,7 +49,7 @@ func TestRoot_Set(t *testing.T) {
 	})
 	t.Run("expect set data only redis storage", func(t *testing.T) {
 		key := "12345"
-		cipherKey := "636b00000000000000000000b669c63918c53bc46f2b9e792bfe3ec1d492742918"
+		cipherKey := "d93beca6efd0421b314c08102f48f13038410738dbd2050c04fc89265a10024ba4"
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 

@@ -13,13 +13,13 @@ var tests = []struct {
 	want  string
 }{
 	{"encode/decode value 1", []byte("I am the key"), []byte("All i need is love"),
-		"0000000000000000000000007b7a155cb0e86bdf072792554b06e1bf0c5f8de39409c324629697c10e3f17980e23"},
+		"000000000000000000000000a285210979aab1707d6215a0eba48236698b06fb4a20005ed0e5e24b538ca5e65107"},
 	{"encode/decode value 2", []byte("I am another key"), []byte("All i need is love love love"),
-		"0000000000000000000000007658edf69909742db1371e66ab9dcfcec2fb449498c8326dd9c87674957a11b1d106d32ec5bde414664bac2a"},
+		"000000000000000000000000a10c2db816d251e8242981a044d0452bd8abcad891a78a75ab0af64444318cbe4c28fe88f4acab3c4e347827"},
 	{"encode/decode with key match more than 32", []byte("werwewtwtwrtrtert55tttttttttttttggggggggggggrt56456hfghfhj$34g"), []byte("All i need is love"),
-		"000000000000000000000000eff457b839858b568bcacf892b213d4591be73186c1ea6409f823ee4a4df806b95fc"},
+		"000000000000000000000000918d52bfe6c8cd7898f5c2b7bd62b71ac34cdd8b177858493ac6184e23fe3188ea14"},
 	{"empty key and value", []byte(""), []byte(""),
-		"000000000000000000000000530f8afbc74536b9a963b4f1c4cb738b"},
+		"000000000000000000000000d51ed6081edb98739080fbe09ec476fb"},
 }
 
 func TestCryptographer_Encode(t *testing.T) {

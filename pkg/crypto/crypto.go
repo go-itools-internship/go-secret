@@ -23,7 +23,7 @@ func NewCryptographer(key []byte, nonceReader io.Reader) *cryptographer {
 	h := sha256.New()
 	h.Write(key)
 	key32 := make([]byte, 32)
-	copy(key32, key)
+	copy(key32, h.Sum(nil))
 	return &cryptographer{
 		key:         key32,
 		nonceReader: nonceReader,

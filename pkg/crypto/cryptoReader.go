@@ -14,6 +14,6 @@ func LoopReader(p []byte) *loopReader {
 // Read reads up to len(p) bytes into p. It returns the number of bytes.
 // Not return EOF error for use with io.ReadFull method.
 func (r *loopReader) Read(p []byte) (n int, err error) {
-	n = copy(p, r.data)
+	copy(p, r.data)
 	return len(p), nil
 }

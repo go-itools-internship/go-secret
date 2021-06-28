@@ -100,8 +100,6 @@ func TestRoot_Server(t *testing.T) {
 
 			resp, err = client.Do(req)
 			require.NoError(t, err)
-			_, err = ioutil.ReadAll(resp.Body)
-			require.NoError(t, err)
 			require.EqualValues(t, http.StatusOK, resp.StatusCode)
 			require.NoError(t, resp.Body.Close())
 		})

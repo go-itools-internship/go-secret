@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"testing"
@@ -34,7 +35,7 @@ func TestFileVault(t *testing.T) {
 
 		testStorage := make(map[string][]byte)
 		require.NoError(t, json.NewDecoder(f).Decode(&testStorage))
-		got := testStorage["f1"]
+		got := testStorage[hex.EncodeToString([]byte("f1"))]
 
 		require.EqualValues(t, want, got)
 	})
@@ -49,7 +50,7 @@ func TestFileVault(t *testing.T) {
 		}()
 
 		testStorage := make(map[string][]byte)
-		testStorage["f2"] = want
+		testStorage[hex.EncodeToString([]byte("f2"))] = want
 
 		require.NoError(t, json.NewEncoder(f).Encode(testStorage))
 

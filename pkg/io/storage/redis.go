@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -31,13 +32,14 @@ func (r *redisVault) SaveData(key, encodedValue []byte) error {
 	}
 	if bytes.Equal(encodedValue, []byte("")) {
 		fmt.Println("Key was deleted")
-		_, err := r.client.Del(ctx, string(key)).Result()
+		_, err := r.client.Del(ctx, hex.EncodeToString(key)).Result()
 		if err != nil {
 			return fmt.Errorf("storage: %w", err)
 		}
 		return nil
 	}
-	err := r.client.Set(ctx, string(key), encodedValue, 0).Err()
+	fmt.Println(hex.EncodeToString(key))
+	err := r.client.Set(ctx, hex.EncodeToString(key), encodedValue, 0).Err()
 	if err != nil {
 		return fmt.Errorf("storage: redis client can't set data %w", err)
 	}
@@ -51,7 +53,7 @@ func (r *redisVault) ReadData(key []byte) ([]byte, error) {
 	if bytes.Equal(key, []byte("")) {
 		return nil, errors.New("storage: key can't be nil")
 	}
-	val, err := r.client.Get(ctx, string(key)).Result()
+	val, err := r.client.Get(ctx, hex.EncodeToString(key)).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return nil, nil

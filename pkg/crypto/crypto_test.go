@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"bytes"
+	"encoding/hex"
 	"testing"
 )
 
@@ -9,20 +10,16 @@ var tests = []struct {
 	name  string
 	key   []byte
 	value []byte
-	want  []byte
+	want  string
 }{
 	{"encode/decode value 1", []byte("I am the key"), []byte("All i need is love"),
-		[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 103, 219, 30, 14, 204, 218, 207, 85, 148, 66,
-			160, 22, 65, 82, 133, 234, 239, 51, 104, 63, 206, 168, 142, 30, 10, 255, 243, 84, 85, 36, 201, 78, 183, 51}},
+		"000000000000000000000000a285210979aab1707d6215a0eba48236698b06fb4a20005ed0e5e24b538ca5e65107"},
 	{"encode/decode value 2", []byte("I am another key"), []byte("All i need is love love love"),
-		[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 170, 62, 141, 236, 82, 152, 165, 131, 27, 42, 227, 232, 125, 148,
-			125, 23, 77, 242, 99, 196, 24, 2, 221, 82, 234, 5, 16, 73, 28, 153, 134, 58,
-			197, 134, 198, 43, 27, 28, 162, 145, 82, 157, 6, 121}},
+		"000000000000000000000000a10c2db816d251e8242981a044d0452bd8abcad891a78a75ab0af64444318cbe4c28fe88f4acab3c4e347827"},
 	{"encode/decode with key match more than 32", []byte("werwewtwtwrtrtert55tttttttttttttggggggggggggrt56456hfghfhj$34g"), []byte("All i need is love"),
-		[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 239, 244, 87, 184, 57, 133, 139, 86, 139, 202, 207, 137, 43, 33, 61, 69,
-			145, 190, 115, 24, 108, 30, 166, 64, 159, 130, 62, 228, 164, 223, 128, 107, 149, 252}},
+		"000000000000000000000000918d52bfe6c8cd7898f5c2b7bd62b71ac34cdd8b177858493ac6184e23fe3188ea14"},
 	{"empty key and value", []byte(""), []byte(""),
-		[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 213, 30, 214, 8, 30, 219, 152, 115, 144, 128, 251, 224, 158, 196, 118, 251}},
+		"000000000000000000000000d51ed6081edb98739080fbe09ec476fb"},
 }
 
 func TestCryptographer_Encode(t *testing.T) {
@@ -30,13 +27,13 @@ func TestCryptographer_Encode(t *testing.T) {
 		t.Logf("\tTest: %d\tfor key %q and value %q", i+1, tt.key, tt.value)
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			encode := NewCryptographer(tt.key)
-			encode.randomFlag = false
+			encode := NewCryptographer(tt.key, &loopReader{})
 			got, err := encode.Encode(tt.value)
+			tgot := hex.EncodeToString(got)
 			if err != nil {
 				return
 			}
-			if !bytes.Equal(got, tt.want) {
+			if tgot != tt.want {
 				t.Errorf(string(got), tt.want)
 			}
 		})
@@ -48,9 +45,8 @@ func TestCryptographer_Decode(t *testing.T) {
 		t.Logf("\tTest: %d\tfor key %q and value %q", i+1, tt.key, tt.value)
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			decode := NewCryptographer(tt.key)
-			decode.randomFlag = false
-			got, err := decode.Decode(tt.want)
+			decode := NewCryptographer(tt.key, &loopReader{})
+			got, err := decode.Decode([]byte(tt.want))
 			if err != nil {
 				return
 			}

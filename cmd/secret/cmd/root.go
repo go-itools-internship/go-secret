@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -115,7 +116,8 @@ func (r *root) setCmd() *cobra.Command {
 		Long:  "it takes keys and a value from user and saves value in encrypted manner in specified storage",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var ds secretApi.DataSaver
-			var cr = crypto.NewCryptographer([]byte(cipherKey))
+			nonceKey := hashCipherKey(cipherKey)
+			var cr = crypto.NewCryptographer([]byte(cipherKey), crypto.LoopReader(nonceKey))
 			logger := r.logger.Named("set-cmd")
 			logger.Info("Start")
 			switch {
@@ -187,7 +189,8 @@ func (r *root) getCmd() *cobra.Command {
 			logger := r.logger.Named("get-cmd")
 			logger.Info("Start")
 			var ds secretApi.DataSaver
-			var cr = crypto.NewCryptographer([]byte(cipherKey))
+			nonceKey := hashCipherKey(cipherKey)
+			var cr = crypto.NewCryptographer([]byte(cipherKey), crypto.LoopReader(nonceKey))
 
 			switch {
 			case redisURL != "":
@@ -267,7 +270,8 @@ func (r *root) serverCmd() *cobra.Command {
 				dataRedis := storage.NewRedisVault(rdb)
 				// remote method set handler for redis storage
 				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
-					cr := crypto.NewCryptographer([]byte(cipher))
+					nonceKey := hashCipherKey(cipher)
+					cr := crypto.NewCryptographer([]byte(cipher), crypto.LoopReader(nonceKey))
 					return provider.NewProvider(cr, dataRedis), nil
 				}
 			case postgresURL != "":
@@ -288,7 +292,8 @@ func (r *root) serverCmd() *cobra.Command {
 				dataPostgres := storage.NewPostgreVault(pdb)
 				// remote method set handler for postgres storage
 				store["remote"] = func(cipher string) (secretApi.Provider, func()) {
-					cr := crypto.NewCryptographer([]byte(cipher))
+					nonceKey := hashCipherKey(cipher)
+					cr := crypto.NewCryptographer([]byte(cipher), crypto.LoopReader(nonceKey))
 					return provider.NewProvider(cr, dataPostgres), nil
 				}
 			}
@@ -298,7 +303,8 @@ func (r *root) serverCmd() *cobra.Command {
 					return fmt.Errorf("can't get storage by path: %s", err)
 				}
 				store["local"] = func(cipher string) (secretApi.Provider, func()) {
-					cr := crypto.NewCryptographer([]byte(cipher))
+					nonceKey := hashCipherKey(cipher)
+					cr := crypto.NewCryptographer([]byte(cipher), crypto.LoopReader(nonceKey))
 					return provider.NewProvider(cr, ds), nil
 				}
 			}
@@ -432,4 +438,10 @@ func disconnectRDB(rdb *redis.Client, logger *zap.SugaredLogger) {
 		return
 	}
 	logger.Info("rdb disconnected")
+}
+
+func hashCipherKey(key string) []byte {
+	h := sha256.New()
+	h.Write([]byte(key))
+	return h.Sum(nil)
 }

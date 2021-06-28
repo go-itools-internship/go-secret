@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"encoding/hex"
 	"testing"
 	"time"
 
@@ -21,8 +22,7 @@ func TestRedisVault_SaveData(t *testing.T) {
 		s := NewRedisVault(rdb)
 		err := s.SaveData([]byte(key), []byte(encodedValue))
 		require.NoError(t, err)
-
-		val, err := s.client.Get(ctx, key).Result()
+		val, err := s.client.Get(ctx, hex.EncodeToString([]byte(key))).Result()
 		require.NoError(t, err)
 		require.EqualValues(t, encodedValue, val)
 	})
